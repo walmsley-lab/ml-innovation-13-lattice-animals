@@ -7,6 +7,11 @@ const DIRECTIONS = Object.freeze([
 // Manhattan distance is a lower bound on arrival: routing detours around traffic.
 const ROUTE_SLACK = 1.1;
 
+// A third of our assignments are walks longer than fifteen cells, which looked
+// like waste. Capping them costs far more than it saves: at a radius of 14 the
+// arena match rate falls from 85.9% to 71.6%, and every cap tested was worse than
+// none. Long recruitment is doing real work, so the only limit is the clock.
+
 const { persistence } = require('./persistence');
 
 const NEIGHBOURS = Object.freeze([[0, -1], [0, 1], [-1, 0], [1, 0]]);
@@ -186,9 +191,64 @@ function route(assignments, occupied, width, height, blockedMoves = new Map()) {
   return { commands, expected };
 }
 
+/** Connected groups of our own units, under 4-adjacency. */
+function clumpsOf(units, width) {
+  const byCell = new Map(units.map(unit => [keyOf(unit.x, unit.y, width), unit]));
+  const seen = new Set();
+  const clumps = [];
+  for (const unit of units) {
+    const start = keyOf(unit.x, unit.y, width);
+    if (seen.has(start)) continue;
+    const members = [];
+    const stack = [start];
+    seen.add(start);
+    while (stack.length) {
+      const cell = stack.pop();
+      const current = byCell.get(cell);
+      members.push(current);
+      for (const [, dx, dy] of DIRECTIONS) {
+        const next = keyOf(current.x + dx, current.y + dy, width);
+        if (byCell.has(next) && !seen.has(next)) { seen.add(next); stack.push(next); }
+      }
+    }
+    clumps.push(members);
+  }
+  return clumps;
+}
+
+/**
+ * Where a unit with no formation should walk. Getting k units adjacent is a far
+ * easier problem than walking each onto an exact cell, and a clump that big can
+ * always be shaped later. So small groups close on larger ones — never the other
+ * way round, which would drag a settled pair apart to collect a straggler — and a
+ * group already big enough to hold a shape stays where it is.
+ */
+function rallyTargets(units, shapeSize, width) {
+  const clumps = clumpsOf(units, width);
+  const targets = new Map();
+  if (clumps.length < 2) return targets;
+  for (const clump of clumps) {
+    if (clump.length >= shapeSize) continue;
+    let best = null;
+    for (const other of clumps) {
+      if (other === clump || other.length < clump.length) continue;
+      for (const anchor of other) {
+        for (const member of clump) {
+          const steps = distance(member, anchor);
+          if (!best || steps < best.steps) best = { steps, anchor };
+        }
+      }
+    }
+    if (!best) continue;
+    for (const member of clump) targets.set(handleOf(member), best.anchor);
+  }
+  return targets;
+}
+
 /** Pure decision function; memory is supplied by the Player adapter. */
 function planTurn({ state, width, height, shape, turnsLeft = 64, reliability = 0.82,
-  previous = new Map(), blockedMoves = new Map(), persistenceOf = persistence, mode = 'arena' }) {
+  previous = new Map(), blockedMoves = new Map(), persistenceOf = persistence, mode = 'arena',
+  rally = mode === 'clash' }) {
   const { all: occupied, own, blush } = occupiedBy(state, width);
   const available = new Map(state.ownUnits.map(unit => [handleOf(unit), unit]));
   const enclosed = enclosedCell(shape);
@@ -239,12 +299,30 @@ function planTurn({ state, width, height, shape, turnsLeft = 64, reliability = 0
   }
 
   const assignments = selected.flatMap(plan => plan.assignments);
-  const movement = route(assignments, occupied, width, height, blockedMoves);
+
+  // Unplanned units close on their neighbours rather than standing idle — but only
+  // where being unplanned is a standing condition rather than a passing one. In
+  // Clash a small force leaves 15% of its units above the solo ceiling, which no
+  // formation can ever claim, and rallying them is worth 2.4 points of match rate.
+  // In Arena only 4% are idle and they are usually waiting a turn for a plan that
+  // is coming, so moving them costs 1.6 points instead.
+  const committed = new Set(assignments.map(({ unit }) => handleOf(unit)));
+  const idle = rally ? state.ownUnits.filter(unit => !committed.has(handleOf(unit))) : [];
+  const targets = rallyTargets(idle, shape.cells.length, width);
+  const rallying = [];
+  for (const unit of idle) {
+    const target = targets.get(handleOf(unit));
+    if (target && distance(unit, target) > 1) rallying.push({ unit, target, rally: true });
+  }
+
+  const movement = route([...assignments, ...rallying], occupied, width, height, blockedMoves);
+  // Rally targets are not commitments, so they do not earn continuity next turn.
   const nextTargets = new Map(assignments.map(({ unit, target }) =>
     [handleOf(unit), keyOf(target.x, target.y, width)]));
   const protectedMixed = selected.filter(plan => plan.complete && plan.foreign > 0)
     .flatMap(plan => plan.assignments.map(({ unit }) => handleOf(unit)));
-  return { ...movement, nextTargets, protectedMixed, selected, unassigned: [...available.keys()] };
+  return { ...movement, nextTargets, protectedMixed, selected, rallying: rallying.length,
+    unassigned: [...available.keys()] };
 }
 
 module.exports = { planTurn, matchesFor, occupiedBy, keyOf };

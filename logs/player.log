@@ -52,3 +52,20 @@
 2026-09-25T23:06:55.839Z Stopping on SIGTERM.
 2026-09-25T23:06:58.991Z Supervising /home/patrickwalmsley/Development/LACK against wss://latticeanimals.com/ws. Traces in /home/patrickwalmsley/Development/ml-innovation-13-lattice-animals/traces.
 2026-09-25T23:06:59.828Z   client | Authenticated at wss://latticeanimals.com/ws
+2026-09-25T23:10:24.070Z Supervising /home/patrickwalmsley/Development/LACK against wss://latticeanimals.com/ws. Traces in /home/patrickwalmsley/Development/ml-innovation-13-lattice-animals/traces.
+2026-09-25T23:10:24.310Z   client | Authenticated at wss://latticeanimals.com/ws
+2026-09-25T23:10:24.362Z   client | Disconnected 4001
+2026-09-25T23:10:24.371Z Client exited (code 0, signal none, close 4001) after 205s.
+2026-09-25T23:10:24.371Z Another client took over this account. Waiting longer before trying again.
+2026-09-25T23:10:24.371Z Reconnecting in 120s.
+2026-09-25T23:10:38.919Z   client | player-finished 8096925f-1c4d-4ea9-b791-4c41f2ddf780
+2026-09-25T23:11:43.531Z   client | player-finished bdbd455e-a533-4078-9b38-e69bf19c4c20
+2026-09-25T23:11:43.565Z   client | Joined game e9f0e410-327d-4fc4-bbf4-716b4878f107
+2026-09-25T23:12:24.472Z Another supervisor holds the lock. Exiting rather than fighting it.
+2026-09-25T23:19:47.777Z   client | Joined game 017519c0-bc09-4e42-9257-e7754db7021a
+2026-09-25T23:20:20.248Z   client | player-finished e9f0e410-327d-4fc4-bbf4-716b4878f107
+2026-09-25T23:20:20.285Z   client | Joined game 284847cf-f569-4f9b-91c9-dd2c7fc9ac40
+2026-09-25T23:27:35.827Z   client | Joined game c5973f11-cfbc-469b-afd6-f03bd797aa94
+2026-09-25T23:28:23.655Z   client | player-finished 017519c0-bc09-4e42-9257-e7754db7021a
+2026-09-25T23:28:55.974Z   client | player-finished 284847cf-f569-4f9b-91c9-dd2c7fc9ac40
+2026-09-25T23:28:56.017Z   client | Joined game 649d9b2c-5021-464e-beb1-d25d317b20ba

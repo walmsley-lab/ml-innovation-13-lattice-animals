@@ -50,19 +50,42 @@ test('returns without a plan when too few units can form the target', () => {
   assert.deepEqual(result.commands, []);
 });
 
-test('a distant unit is recruited when the horizon allows the walk', () => {
-  // Two units hold the top of an I3; the only candidate for the third is far away.
-  const input = state([unit('a', 5, 5), unit('b', 5, 6), unit('c', 5, 32)]);
+const plannedFor = (result, handle) => result.selected.some(plan =>
+  plan.assignments.some(item => String(item.unit.handle) === handle));
+
+test('a unit within recruiting range is walked onto the formation', () => {
+  // Two units hold the top of an I3 and the third is close enough to be worth
+  // fetching, so it is given a cell in the formation rather than a rally point.
+  const input = state([unit('a', 5, 5), unit('b', 5, 6), unit('c', 5, 15)]);
   const result = planTurn({ state: input, width: 40, height: 40, shape: I3, turnsLeft: 60 });
-  const move = result.commands.find(command => command.handle === 'c');
-  assert.ok(move, 'the distant unit should be recruited');
-  assert.equal(move.params[0], 'up');
+  assert.ok(plannedFor(result, 'c'), 'the nearby unit should be recruited');
+  assert.equal(result.commands.find(command => command.handle === 'c')?.params[0], 'up');
 });
 
-test('the same walk is refused when it cannot finish before the round ends', () => {
-  const input = state([unit('a', 5, 5), unit('b', 5, 6), unit('c', 5, 32)]);
-  const result = planTurn({ state: input, width: 40, height: 40, shape: I3, turnsLeft: 12 });
-  assert.equal(result.commands.some(command => command.handle === 'c'), false);
+test('a unit with no formation to join rallies instead of standing still', () => {
+  // Too little of the round is left to walk it onto a cell, but closing on its
+  // neighbours still leaves it somewhere useful for the round after.
+  const input = state([unit('a', 5, 5), unit('b', 5, 6), unit('c', 5, 36)]);
+  const result = planTurn({ state: input, width: 40, height: 40, shape: I3, turnsLeft: 10, rally: true });
+  assert.equal(plannedFor(result, 'c'), false, 'no formation can claim it in time');
+  assert.equal(result.rallying, 1, 'it should be rallying');
+  assert.equal(result.commands.find(command => command.handle === 'c')?.params[0], 'up',
+    'and closing on its neighbours');
+});
+
+test('a settled group is never dragged apart to collect a straggler', () => {
+  const input = state([unit('a', 5, 5), unit('b', 5, 6), unit('c', 5, 36)]);
+  const result = planTurn({ state: input, width: 40, height: 40, shape: I3, turnsLeft: 10, rally: true });
+  for (const handle of ['a', 'b']) {
+    assert.equal(result.commands.some(command => command.handle === handle), false,
+      `${handle} should hold its position`);
+  }
+});
+
+test('a walk that cannot finish before the round ends is refused', () => {
+  const input = state([unit('a', 5, 5), unit('b', 5, 6), unit('c', 5, 15)]);
+  const result = planTurn({ state: input, width: 40, height: 40, shape: I3, turnsLeft: 6 });
+  assert.equal(plannedFor(result, 'c'), false);
 });
 
 test('a nearer formation is preferred when both match the same number of units', () => {
