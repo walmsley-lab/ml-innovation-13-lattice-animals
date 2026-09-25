@@ -4,8 +4,11 @@
   "version": "0.1.0",
   "description": "Formation planner for CIMC LatticeAnimals",
   "scripts": {
-    "test": "node --test tests/*.test.js",
-    "install:kit": "node scripts/install.mjs"
+    "test": "node --test tests/*.test.*",
+    "install:kit": "node scripts/install.mjs",
+    "record": "node --env-file-if-exists=.env tools/record.mjs",
+    "analyze": "node tools/analyze.mjs",
+    "opponents": "node tools/fetch-opponents.mjs"
   },
   "engines": { "node": ">=24" }
 }

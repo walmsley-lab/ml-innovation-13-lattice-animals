@@ -2,3 +2,8 @@
 node_modules/
 .env
 *.token
+
+# Captured play and cached third-party strategies are data, not source.
+runs/
+traces/
+opponents/

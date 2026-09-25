@@ -11,5 +11,6 @@ if (!destination) {
   await mkdir(join(kit, 'src'), { recursive: true });
   await copyFile(join(root, 'player.js'), join(kit, 'player.js'));
   await copyFile(join(root, 'src/planner.js'), join(kit, 'src/planner.js'));
-  console.log(`Installed player.js and src/planner.js in ${kit}`);
+  await copyFile(join(root, 'src/recorder.js'), join(kit, 'src/recorder.js'));
+  console.log(`Installed player.js, src/planner.js and src/recorder.js in ${kit}`);
 }

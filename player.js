@@ -3,6 +3,7 @@
 // Copy this file and src/planner.js into the official LACK contestant kit.
 const Player = require('./game/Player');
 const { planTurn, keyOf } = require('./src/planner');
+const { withRecording } = require('./src/recorder');
 
 const TURN_HORIZON = Number.parseInt(process.env.LACK_TURNS_PER_ROUND || '64', 10);
 
@@ -47,6 +48,17 @@ class FormationPlayer extends Player {
         this.reliability.success / (this.reliability.success + this.reliability.failure))),
       previous: this.previousTargets, blockedMoves: this.blockedMoves,
     });
+    // Published for the trace recorder; offline analysis needs the plan, not just
+    // the commands, to tell a bad decision apart from a blocked one.
+    this.diagnostics = {
+      formations: decision.selected.length,
+      complete: decision.selected.filter(plan => plan.complete).length,
+      mixed: decision.selected.filter(plan => plan.foreign > 0).length,
+      assigned: decision.selected.reduce((sum, plan) => sum + plan.assignments.length, 0),
+      unassigned: decision.unassigned.length,
+      moving: decision.commands.length,
+      blocked: [...this.blockedMoves.values()].reduce((sum, failures) => sum + failures.size, 0),
+    };
     this.previousTargets = decision.nextTargets;
     this.expectedMoves = decision.expected;
     // Only use the latest prediction. An earlier snapshot is not the final board.
@@ -71,4 +83,4 @@ class FormationPlayer extends Player {
   }
 }
 
-module.exports = FormationPlayer;
+module.exports = withRecording(FormationPlayer);
