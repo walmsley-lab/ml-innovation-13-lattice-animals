@@ -1,0 +1,11 @@
+{
+  "name": "lattice-animals-formation-player",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Formation planner for CIMC LatticeAnimals",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "install:kit": "node scripts/install.mjs"
+  },
+  "engines": { "node": ">=24" }
+}
