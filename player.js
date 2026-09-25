@@ -6,6 +6,10 @@ const { planTurn, keyOf } = require('./src/planner');
 const { withRecording } = require('./src/recorder');
 
 const TURN_HORIZON = Number.parseInt(process.env.LACK_TURNS_PER_ROUND || '64', 10);
+// Arena seats two competitors with 32 units each; Clash seats up to eight with 16.
+// The kit's client does not pass the match configuration to the strategy, so the
+// mode is read off the first full complement we are given.
+const CLASH_UNIT_CEILING = 24;
 
 class FormationPlayer extends Player {
   constructor() {
@@ -16,6 +20,7 @@ class FormationPlayer extends Player {
     this.expectedMoves = new Map();
     this.lastMixedPrediction = [];
     this.turnIndex = 0;
+    this.mode = null;
   }
 
   round(width, height, targetShape) {
@@ -29,6 +34,10 @@ class FormationPlayer extends Player {
 
   async turn(state, remainingMs) {
     this.turnIndex++;
+    // Set once, from the first roster we see, since attrition only shrinks it.
+    if (!this.mode && state.ownUnits.length) {
+      this.mode = state.ownUnits.length > CLASH_UNIT_CEILING ? 'arena' : 'clash';
+    }
     // The deadline includes network transit. Do not start expensive work when late.
     if (remainingMs < 35) return [];
     const own = new Map(state.ownUnits.map(unit => [String(unit.handle), unit]));
@@ -47,6 +56,7 @@ class FormationPlayer extends Player {
       reliability: Math.max(0.55, Math.min(0.95,
         this.reliability.success / (this.reliability.success + this.reliability.failure))),
       previous: this.previousTargets, blockedMoves: this.blockedMoves,
+      mode: this.mode ?? 'arena',
     });
     // Published for the trace recorder; offline analysis needs the plan, not just
     // the commands, to tell a bad decision apart from a blocked one.
@@ -57,6 +67,7 @@ class FormationPlayer extends Player {
       assigned: decision.selected.reduce((sum, plan) => sum + plan.assignments.length, 0),
       unassigned: decision.unassigned.length,
       moving: decision.commands.length,
+      mode: this.mode,
       blocked: [...this.blockedMoves.values()].reduce((sum, failures) => sum + failures.size, 0),
     };
     this.previousTargets = decision.nextTargets;

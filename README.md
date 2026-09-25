@@ -26,6 +26,32 @@ The kit's reference configuration has 64 turns per round. If the organizer chang
 
 The player does not attack or defect yet. A deliberate late departure from a mixed shape is an experimental policy because it also costs our unit energy and can benefit a third competitor or damage a noncompetitive golem.
 
+## Modes
+
+Connecting opts into **both** Arena and Clash. The site's own client has no
+request that selects one — its whole vocabulary is login/register/resume/logout,
+watch/unwatch, player-token, and the three player messages — and declining a
+`player-join` suspends the client rather than filtering it. So play cannot be
+restricted to one mode; only evaluation and strategy can differ.
+
+The strategy tells them apart from the roster it is handed, since the kit's
+client does not pass the match configuration through: more than 24 units is
+Arena, otherwise Clash. They differ in ways that matter. Clash puts up to eight
+competitors on one board, so it is denser (84.8 units at round end against 50.8)
+and its cells churn far more — a foreign cell with forty turns to go survives to
+round end 28.8% of the time in Clash against 41.7% in Arena. `tools/fit-persistence.mjs`
+fits the two separately, and the planner uses whichever applies.
+
+Clash fitting rests on three games, so treat it as provisional. The site sends no
+per-round `progress` for Clash, so per-competitor attribution is unavailable
+there and only our own traces carry round outcomes.
+
+```sh
+npm run arena    # evaluate at Arena configuration: 2 competitors, 32 units
+npm run clash    # evaluate at Clash configuration: 8 competitors, 16 units
+npm run watch    # live results as history accumulates
+```
+
 ## Playing continuously
 
 Arena ranks on accumulated wins, so disconnected time is rank not earned. The

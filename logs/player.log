@@ -14,3 +14,10 @@
 2026-09-25T22:25:59.376Z Stopping on SIGTERM.
 2026-09-25T22:26:02.527Z Supervising /home/patrickwalmsley/Development/LACK against wss://latticeanimals.com/ws. Traces in /home/patrickwalmsley/Development/ml-innovation-13-lattice-animals/traces.
 2026-09-25T22:26:02.883Z   client | Authenticated at wss://latticeanimals.com/ws
+2026-09-25T22:26:28.796Z   client | Joined game de019c95-f08e-4405-b04f-4787f49df5e1
+2026-09-25T22:27:17.450Z   client | Joined game de3195ee-55b2-4c47-8d59-20e63f443e88
+2026-09-25T22:28:37.551Z   client | player-finished 1dcf1bdf-55cc-494a-91fe-caaad9845cab
+2026-09-25T22:28:37.594Z   client | Joined game dbdd75ed-fc76-4db8-9384-8580e405e2ef
+2026-09-25T22:35:05.501Z   client | player-finished de019c95-f08e-4405-b04f-4787f49df5e1
+2026-09-25T22:35:54.338Z   client | player-finished de3195ee-55b2-4c47-8d59-20e63f443e88
+2026-09-25T22:35:54.384Z   client | Joined game 22757bd0-4080-4a9d-ac78-76658139b982

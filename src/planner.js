@@ -188,7 +188,7 @@ function route(assignments, occupied, width, height, blockedMoves = new Map()) {
 
 /** Pure decision function; memory is supplied by the Player adapter. */
 function planTurn({ state, width, height, shape, turnsLeft = 64, reliability = 0.82,
-  previous = new Map(), blockedMoves = new Map(), persistenceOf = persistence }) {
+  previous = new Map(), blockedMoves = new Map(), persistenceOf = persistence, mode = 'arena' }) {
   const { all: occupied, own, blush } = occupiedBy(state, width);
   const available = new Map(state.ownUnits.map(unit => [handleOf(unit), unit]));
   const enclosed = enclosedCell(shape);
@@ -198,7 +198,8 @@ function planTurn({ state, width, height, shape, turnsLeft = 64, reliability = 0
   const trust = key => {
     let value = trustCache.get(key);
     if (value === undefined) {
-      value = Math.max(0.02, Math.min(0.99, persistenceOf(blush.get(key) ?? null, turnsLeft, reliability)));
+      value = Math.max(0.02, Math.min(0.99,
+        persistenceOf(blush.get(key) ?? null, turnsLeft, mode, reliability)));
       trustCache.set(key, value);
     }
     return value;

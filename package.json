@@ -5,8 +5,11 @@
   "description": "Formation planner for CIMC LatticeAnimals",
   "scripts": {
     "test": "node --test tests/*.test.*",
-    "install:kit": "node scripts/install.mjs",
     "play": "node --env-file-if-exists=.env tools/supervise.mjs",
+    "watch": "node tools/watch.mjs",
+    "arena": "node scripts/benchmark.mjs ../LACK 6 --units 32 --rounds 16 --vs hive",
+    "clash": "node scripts/benchmark.mjs ../LACK 3 --units 16 --rounds 16 --vs hive,hive,greedy,greedy,hive,greedy,dummy",
+    "install:kit": "node scripts/install.mjs",
     "token": "node --env-file-if-exists=.env tools/player-token.mjs",
     "record": "node --env-file-if-exists=.env tools/record.mjs",
     "analyze": "node tools/analyze.mjs",

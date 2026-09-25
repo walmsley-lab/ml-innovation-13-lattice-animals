@@ -40,8 +40,8 @@ const golemName = argumentAfter('--golem');
 const forcedShape = argumentAfter('--shape');
 const runsDirectory = resolve(process.env.LATTICE_RUNS || 'runs');
 const opponentsDirectory = resolve(process.env.LACK_OPPONENTS || 'opponents');
-const units = Number.parseInt(process.env.BENCH_UNITS || '16', 10);
-const rounds = Number.parseInt(process.env.BENCH_ROUNDS || '4', 10);
+const units = Number.parseInt(argumentAfter('--units') ?? process.env.BENCH_UNITS ?? '16', 10);
+const rounds = Number.parseInt(argumentAfter('--rounds') ?? process.env.BENCH_ROUNDS ?? '4', 10);
 const turns = Number.parseInt(process.env.LACK_TURNS_PER_ROUND || '64', 10);
 
 /** The site ships bare class declarations that close over a global `Player`. */
@@ -57,7 +57,14 @@ async function loadOpponent(name) {
 
 const directions = ['up', 'down', 'left', 'right'];
 const competitors = [{ id: 'plan', Strategy }];
-for (const name of opponentNames) competitors.push({ id: name, Strategy: await loadOpponent(name) });
+// Clash seats up to eight, so the same opponent may appear more than once; player
+// ids must stay distinct or the engine rejects the roster.
+const used = new Map();
+for (const name of opponentNames) {
+  const seen = (used.get(name) ?? 0) + 1;
+  used.set(name, seen);
+  competitors.push({ id: seen === 1 ? name : `${name}${seen}`, Strategy: await loadOpponent(name) });
+}
 if (golemName) competitors.push({ id: 'golem', Strategy: await loadOpponent(golemName), competitive: false });
 
 const results = [];
@@ -151,7 +158,8 @@ for (let seed = 1; seed <= games; seed++) {
 
 const label = name => name.padEnd(10);
 const rate = (matched, total) => total ? `${(100 * matched / total).toFixed(1)}%` : '—';
-console.log(`\n${competitors.length} competitors, ${units} units each, ${rounds} rounds x ${turns} turns, ${games} game(s)\n`);
+const mode = units > 24 ? 'arena' : 'clash';
+console.log(`\n${mode}: ${competitors.length} competitors, ${units} units each, ${rounds} rounds x ${turns} turns, ${games} game(s)\n`);
 for (const { id } of competitors) {
   const rows = results.flatMap(result => result.rounds.flatMap(round =>
     round.players.filter(player => player.userName === id)));
