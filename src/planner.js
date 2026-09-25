@@ -7,9 +7,22 @@ const DIRECTIONS = Object.freeze([
 // Manhattan distance is a lower bound on arrival: routing detours around traffic.
 const ROUTE_SLACK = 1.1;
 
+const NEIGHBOURS = Object.freeze([[0, -1], [0, 1], [-1, 0], [1, 0]]);
+
 const keyOf = (x, y, width) => y * width + x;
 const distance = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 const handleOf = unit => String(unit.handle);
+
+/**
+ * Index of a cell whose four neighbours all belong to the shape, or -1. X5's
+ * centre is the only one in the catalogue: once its four arms arrive nothing can
+ * enter the middle, and the formation can never complete. Every X5 left one cell
+ * short in live play — sixteen of sixteen — was missing exactly that cell.
+ */
+function enclosedCell(shape) {
+  return shape.cells.findIndex(([x, y]) => NEIGHBOURS.every(([dx, dy]) =>
+    shape.cells.some(([cx, cy]) => cx === x + dx && cy === y + dy)));
+}
 
 /** Reproduce the reference engine's row-major, non-overlapping match order. */
 function matchesFor(occupied, shape, width, height) {
@@ -33,7 +46,7 @@ function occupiedBy(state, width) {
   return { all, own };
 }
 
-function candidateAt(x, y, shape, width, occupied, own, available, blocked, turnsLeft, reliability, previous) {
+function candidateAt(x, y, shape, width, occupied, own, available, blocked, turnsLeft, reliability, previous, enclosed = -1) {
   const cells = shape.cells.map(([dx, dy]) => ({ x: x + dx, y: y + dy, key: keyOf(x + dx, y + dy, width) }));
   if (cells.some(cell => blocked.has(cell.key))) return null;
   const kept = [];
@@ -78,6 +91,24 @@ function candidateAt(x, y, shape, width, occupied, own, available, blocked, turn
 
   const ownedCount = assignments.length;
   if (!ownedCount) return null;
+
+  // An enclosed cell has to be occupied before the ring around it closes, so the
+  // unit heading there must arrive ahead of the last one heading for its border.
+  if (enclosed >= 0) {
+    const centre = cells[enclosed];
+    if (!occupied.has(centre.key)) {
+      const arrival = new Map(assignments.map(({ unit, target }) =>
+        [keyOf(target.x, target.y, width), distance(unit, target)]));
+      const centreArrival = arrival.get(centre.key);
+      if (centreArrival === undefined) return null;
+      let ringClosed = 0;
+      for (const [dx, dy] of NEIGHBOURS) {
+        const key = keyOf(centre.x + dx, centre.y + dy, width);
+        ringClosed = Math.max(ringClosed, occupied.has(key) ? 0 : arrival.get(key) ?? 0);
+      }
+      if (centreArrival >= ringClosed) return null;
+    }
+  }
   const urgent = assignments.reduce((sum, { unit }) => sum + (unit.energy === 1 ? 0.25 : 0), 0);
   const completion = Math.pow(reliability, foreign);
   // No rule charges energy for moving, so distance is a deadline and an opportunity
@@ -153,6 +184,7 @@ function planTurn({ state, width, height, shape, turnsLeft = 64, reliability = 0
   previous = new Map(), blockedMoves = new Map() }) {
   const { all: occupied, own } = occupiedBy(state, width);
   const available = new Map(state.ownUnits.map(unit => [handleOf(unit), unit]));
+  const enclosed = enclosedCell(shape);
   const actualMatches = matchesFor(occupied, shape, width, height);
   const blocked = new Set(actualMatches.flatMap(match => match.cells));
   const selected = [];
@@ -171,7 +203,7 @@ function planTurn({ state, width, height, shape, turnsLeft = 64, reliability = 0
   for (let y = 0; y <= height - shape.height; y++) {
     for (let x = 0; x <= width - shape.width; x++) {
       const candidate = candidateAt(x, y, shape, width, occupied, own, available,
-        blocked, turnsLeft, reliability, previous);
+        blocked, turnsLeft, reliability, previous, enclosed);
       if (candidate && candidate.score > 0) candidates.push(candidate);
     }
   }
@@ -181,7 +213,7 @@ function planTurn({ state, width, height, shape, turnsLeft = 64, reliability = 0
   for (const draft of candidates.slice(0, 320)) {
     if (!available.size) break;
     const candidate = candidateAt(draft.x, draft.y, shape, width, occupied, own,
-      available, blocked, turnsLeft, reliability, previous);
+      available, blocked, turnsLeft, reliability, previous, enclosed);
     if (!candidate || candidate.score <= 0) continue;
     selected.push(candidate);
     candidate.cells.forEach(cell => blocked.add(cell));

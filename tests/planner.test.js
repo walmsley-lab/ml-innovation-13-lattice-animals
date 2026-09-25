@@ -75,3 +75,34 @@ test('a nearer formation is preferred when both match the same number of units',
   assert.equal(move.params[0], 'up', 'it should close on the nearer column');
 });
 
+
+const X5 = { name: 'X5', width: 3, height: 3, cells: [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2]] };
+
+test('an X5 is never planned with its centre arriving after the arms', () => {
+  // The centre is enclosed by the four arms, so a unit that reaches it last finds
+  // it walled off and the formation can never complete.
+  const layouts = [
+    [unit('a', 10, 10), unit('b', 11, 10), unit('c', 12, 10), unit('d', 10, 11),
+      unit('e', 10, 12), unit('f', 30, 30)],
+    [unit('a', 11, 10), unit('b', 10, 11), unit('c', 12, 11), unit('d', 11, 12),
+      unit('e', 28, 28)],
+    [unit('a', 5, 5), unit('b', 6, 5), unit('c', 7, 5), unit('d', 8, 5),
+      unit('e', 9, 5), unit('f', 5, 20), unit('g', 20, 5)],
+  ];
+  for (const own of layouts) {
+    const result = planTurn({ state: state(own), width: 40, height: 40, shape: X5, turnsLeft: 60 });
+    for (const plan of result.selected) {
+      const centre = { x: plan.x + 1, y: plan.y + 1 };
+      const reach = ({ unit: from, target }) =>
+        Math.abs(from.x - target.x) + Math.abs(from.y - target.y);
+      const toCentre = plan.assignments.find(item =>
+        item.target.x === centre.x && item.target.y === centre.y);
+      if (!toCentre || reach(toCentre) === 0) continue;
+      const ring = plan.assignments.filter(item =>
+        Math.abs(item.target.x - centre.x) + Math.abs(item.target.y - centre.y) === 1);
+      const last = Math.max(0, ...ring.map(reach));
+      assert.ok(reach(toCentre) < last,
+        `centre arrives at ${reach(toCentre)} but the ring closes at ${last}`);
+    }
+  }
+});
