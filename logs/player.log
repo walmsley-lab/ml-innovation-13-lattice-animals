@@ -23,3 +23,23 @@
 2026-09-25T22:35:54.384Z   client | Joined game 22757bd0-4080-4a9d-ac78-76658139b982
 2026-09-25T22:37:14.782Z   client | player-finished dbdd75ed-fc76-4db8-9384-8580e405e2ef
 2026-09-25T22:37:14.810Z   client | Joined game ca1f9cf4-c708-41cf-aded-4718ead21cbf
+2026-09-25T22:44:14.935Z   client | Joined game c65329a0-4e6b-4990-a717-34d0224c55a5
+2026-09-25T22:44:31.607Z   client | player-finished 22757bd0-4080-4a9d-ac78-76658139b982
+2026-09-25T22:44:31.629Z   client | Joined game 05c7aea4-22d0-4847-bf32-0b5e4524ec91
+2026-09-25T22:45:52.123Z   client | player-finished ca1f9cf4-c708-41cf-aded-4718ead21cbf
+2026-09-25T22:45:52.282Z   client | Joined game 5bbef3da-a8fc-4f7d-9499-47ae784f16a6
+2026-09-25T22:52:51.411Z   client | player-finished c65329a0-4e6b-4990-a717-34d0224c55a5
+2026-09-25T22:53:08.015Z   client | player-finished 05c7aea4-22d0-4847-bf32-0b5e4524ec91
+2026-09-25T22:53:08.053Z   client | Joined game 1a75a911-64eb-407f-954c-b29570ec64d8
+2026-09-25T22:54:28.645Z   client | player-finished 5bbef3da-a8fc-4f7d-9499-47ae784f16a6
+2026-09-25T22:54:28.662Z   client | Joined game 27d6484a-72b4-4d0f-9ca1-dc557df5dba6
+2026-09-25T23:01:44.913Z   client | player-finished 1a75a911-64eb-407f-954c-b29570ec64d8
+2026-09-25T23:02:00.731Z   client | Joined game 8096925f-1c4d-4ea9-b791-4c41f2ddf780
+2026-09-25T23:03:05.554Z   client | player-finished 27d6484a-72b4-4d0f-9ca1-dc557df5dba6
+2026-09-25T23:03:05.617Z   client | Joined game bdbd455e-a533-4078-9b38-e69bf19c4c20
+2026-09-25T23:03:29.027Z Supervising /home/patrickwalmsley/Development/LACK against wss://latticeanimals.com/ws. Traces in /home/patrickwalmsley/Development/ml-innovation-13-lattice-animals/traces.
+2026-09-25T23:03:29.346Z   client | Authenticated at wss://latticeanimals.com/ws
+2026-09-25T23:03:29.380Z   client | Disconnected 4001
+2026-09-25T23:03:29.404Z Client exited (code 0, signal none, close 4001) after 2247s.
+2026-09-25T23:03:29.404Z Another client took over this account. Waiting longer before trying again.
+2026-09-25T23:03:29.408Z Reconnecting in 120s.

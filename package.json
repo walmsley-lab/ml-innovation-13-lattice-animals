@@ -14,6 +14,7 @@
     "record": "node --env-file-if-exists=.env tools/record.mjs",
     "analyze": "node tools/analyze.mjs",
     "opponents": "node tools/opponents.mjs",
+    "convergence": "node tools/convergence.mjs",
     "fetch:opponents": "node tools/fetch-opponents.mjs",
     "fit": "node tools/fit-persistence.mjs"
   },
