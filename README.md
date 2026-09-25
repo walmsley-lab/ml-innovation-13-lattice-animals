@@ -70,6 +70,26 @@ and the largest set of disjoint placements the board actually supported. Pass
 
 Archives are gzipped: fifty 16-round games are about 6 MB.
 
+## Predicting arena results
+
+```sh
+BENCH_UNITS=32 BENCH_ROUNDS=16 node scripts/benchmark.mjs ../LACK 6 --vs hive --record
+node tools/predict.mjs --subject plan
+```
+
+Rounds are not independent. A competitor that misses matches loses units, and a
+smaller force matches worse next round, so a projection has to simulate that
+spiral rather than multiply an average. The archive measures the curve: across the
+field, match rate falls from 90.7% at 32 units to 61.1% at 4.
+
+`tools/predict.mjs` fits the attrition rule against real games — replaying each
+competitor's own observed per-round rates reproduces its declared finishing energy
+to within about one energy — then runs the same model on locally measured rates.
+It reports the projected finish, a head-to-head estimate against every competitor
+in the archive, and how final energy responds to match rate. That last table is
+the one worth reading: the payoff is sharply convex, so match rate at full strength
+is the variable that decides everything else.
+
 ## Local evaluation
 
 After installing into a kit checkout:
@@ -81,7 +101,9 @@ npm run analyze -- --me plan
 ```
 
 `--vs` accepts `random`, `dummy`, `greedy`, `hive`, and `self`; several run at once
-as separate competitors. `--record` writes replays in the same schema the arena
+as separate competitors, and `--golem NAME` seats a noncompetitive one. Arena games
+in the archive are 1v1 with 32 units and no golem, which is what `BENCH_UNITS=32
+BENCH_ROUNDS=16` reproduces. `--record` writes replays in the same schema the arena
 recorder archives, so one analysis path serves local and live games. Measuring
 against `random` flatters any strategy and should not be trusted on its own.
 

@@ -28,6 +28,9 @@ const argumentAfter = flag => {
 const games = Number.parseInt(process.argv[3]?.startsWith('--') ? '5' : process.argv[3] || '5', 10);
 const opponentNames = (argumentAfter('--vs') || 'random').split(',').map(name => name.trim()).filter(Boolean);
 const record = process.argv.includes('--record');
+// Arena seats an optional noncompetitive golem. It takes no result but occupies
+// cells and supplies foreign units, so it changes density and must be modelled.
+const golemName = argumentAfter('--golem');
 const runsDirectory = resolve(process.env.LATTICE_RUNS || 'runs');
 const opponentsDirectory = resolve(process.env.LACK_OPPONENTS || 'opponents');
 const units = Number.parseInt(process.env.BENCH_UNITS || '16', 10);
@@ -48,6 +51,7 @@ async function loadOpponent(name) {
 const directions = ['up', 'down', 'left', 'right'];
 const competitors = [{ id: 'plan', Strategy }];
 for (const name of opponentNames) competitors.push({ id: name, Strategy: await loadOpponent(name) });
+if (golemName) competitors.push({ id: 'golem', Strategy: await loadOpponent(golemName), competitive: false });
 
 const results = [];
 let slowestMs = 0;
@@ -60,8 +64,8 @@ for (let seed = 1; seed <= games; seed++) {
     randomState ^= randomState << 5;
     return (randomState >>> 0) / 4294967296;
   };
-  const roster = competitors.flatMap(({ id }) => Array.from({ length: units }, (_, index) => ({
-    unitId: `${id}-${index}`, playerId: id, playerName: id, handle: String(index), energy: 2,
+  const roster = competitors.flatMap(({ id, competitive = true }) => Array.from({ length: units }, (_, index) => ({
+    unitId: `${id}-${index}`, playerId: id, playerName: id, handle: String(index), energy: 2, competitive,
   })));
   const game = new Game(roster, { width: 64, height: 64 }, random);
   const players = new Map(competitors.map(({ id, Strategy: Class }) => [id, Class ? new Class() : null]));
@@ -126,7 +130,7 @@ for (let seed = 1; seed <= games; seed++) {
     await writeRecord(runsDirectory, gameId, {
       gameId, capturedAt: new Date().toISOString(),
       summary: { mode: 'local', width: 64, height: 64, maxRounds: rounds, progress,
-        players: competitors.map(({ id }) => ({ userName: id, initialCount: units, golem: false })),
+        players: competitors.map(({ id, competitive = true }) => ({ userName: id, initialCount: units, golem: !competitive })),
         results: game.view.results },
       replay: { gameId, status: 'finished', endReason: game.view.endReason,
         results: game.view.results, log: game.view },
