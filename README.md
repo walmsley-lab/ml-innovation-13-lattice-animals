@@ -47,9 +47,12 @@ per-round `progress` for Clash, so per-competitor attribution is unavailable
 there and only our own traces carry round outcomes.
 
 ```sh
-npm run arena    # evaluate at Arena configuration: 2 competitors, 32 units
-npm run clash    # evaluate at Clash configuration: 8 competitors, 16 units
-npm run watch    # live results as history accumulates
+npm run bench:arena   # simulate locally at Arena configuration: 2 competitors, 32 units
+npm run bench:clash   # simulate locally at Clash configuration: 8 competitors, 16 units
+npm run watch         # live results from real games as history accumulates
+
+The two bench commands play nobody: they run the reference engine offline against
+the kit's bundled strategies. Only `npm run play` connects to the competition.
 ```
 
 ## Playing continuously
