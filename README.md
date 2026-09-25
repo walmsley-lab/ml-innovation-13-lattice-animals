@@ -95,6 +95,22 @@ the two streams have different IDs and can be aligned by their timestamps.
 commands can be tried without access to the arena session or the original raw
 files. It is a local reproduction against kit bots, not an arena sample.
 
+## Profiling opponents
+
+```sh
+node tools/opponents.mjs --me YOUR_NAME
+```
+
+Replays anonymise units, so each competitor's behaviour is recovered from three
+sources in decreasing order of certainty: energy deltas give everyone's matched
+count in every game; in games we played, subtracting our own traced units from
+the board leaves the opponent's exactly; and blush is self-applied and persists,
+so a competitor that reuses a colour has fingerprinted itself.
+
+Blush is attributed only where one competitor was present every time a colour
+appeared. Crediting a colour to both players in a game would attribute an
+opponent's blush to us — we set none at all.
+
 ## Predicting arena results
 
 ```sh
