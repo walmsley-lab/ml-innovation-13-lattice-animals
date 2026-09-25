@@ -6,10 +6,11 @@
 // Authentication uses the website session, not the player token: set
 // LATTICE_SESSION_TOKEN (browser local storage key `latticeanimals.session.v1`)
 // or LATTICE_USER and LATTICE_PASSWORD.
-import { mkdir, readdir, writeFile, appendFile } from 'node:fs/promises';
+import { mkdir, appendFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { connect, authenticate, credentialsFromEnvironment, DEFAULT_ENDPOINT } from './protocol.mjs';
 import { ReplayAssembler, mergeProgress } from './replay.mjs';
+import { writeRecord, archivedIds } from './archive.mjs';
 
 const CAPTURE_TIMEOUT_MS = 90_000;
 const BETWEEN_CAPTURES_MS = 300;
@@ -29,9 +30,7 @@ const log = (...parts) => console.log(new Date().toISOString(), ...parts);
 
 async function loadArchive() {
   await mkdir(runsDirectory, { recursive: true });
-  for (const name of await readdir(runsDirectory)) {
-    if (name.endsWith('.json')) archived.add(name.slice(0, -5));
-  }
+  for (const gameId of await archivedIds(runsDirectory)) archived.add(gameId);
   log(`Archive at ${runsDirectory} holds ${archived.size} game(s).`);
 }
 
@@ -84,7 +83,7 @@ async function capture(session, gameId) {
 async function save(gameId, replay) {
   const summary = summaries.get(gameId) ?? null;
   const record = { gameId, capturedAt: new Date().toISOString(), summary, replay };
-  await writeFile(join(runsDirectory, `${gameId}.json`), JSON.stringify(record));
+  await writeRecord(runsDirectory, gameId, record);
   const results = replay.results ?? summary?.results ?? [];
   await appendFile(join(runsDirectory, 'index.jsonl'), JSON.stringify({
     gameId, capturedAt: record.capturedAt, mode: summary?.mode ?? replay.mode ?? 'arena',

@@ -76,9 +76,13 @@ export class Session {
   close() { try { this.#socket.close(1000, 'Client disconnected'); } catch {} }
 }
 
-/** Connect and wait for the server's `ready` message. */
-export async function connect(endpoint) {
-  const socket = new WebSocket(endpoint);
+/**
+ * Connect and wait for the server's `ready` message. The session socket serves the
+ * website, and the server refuses session credentials from a connection that does
+ * not present an allowed browser origin.
+ */
+export async function connect(endpoint, origin = process.env.LATTICE_ORIGIN || 'https://latticeanimals.com') {
+  const socket = new WebSocket(endpoint, origin ? { headers: { Origin: origin } } : undefined);
   const session = new Session(socket);
   const ready = session.next(message => message.type === 'ready', 20_000);
   await new Promise((resolve, reject) => {

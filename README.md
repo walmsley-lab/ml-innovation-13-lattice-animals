@@ -59,11 +59,16 @@ Replays hide ownership, as the rules require. Two things recover it:
   to `traces/` — owned positions, issued commands, planner internals and per-turn
   outcomes. Set `LACK_TRACE=0` to disable it.
 
-`tools/analyze.mjs` reports, per round and per competitor: units matched against
-the **reachable ceiling** (`shapeSize × floor(units / shapeSize)`), the turn a round
-stopped improving, cells stranded in connected components too small to ever match,
-and the gap between what the engine's row-major scan collected and the largest set
-of disjoint placements the final board actually supported.
+`tools/analyze.mjs` reports, per competitor: the share of its surviving units
+matched each round, how many of those needed foreign units to complete a shape
+(the **solo ceiling** is `shapeSize × floor(units / shapeSize)`, and beating it means
+other players' units filled the gaps), and units lost per round. Per round it also
+reports the turn play stopped improving, cells stranded in connected components too
+small to ever match, and the gap between what the engine's row-major scan collected
+and the largest set of disjoint placements the board actually supported. Pass
+`--games` for per-round tables and `--json` for the raw figures.
+
+Archives are gzipped: fifty 16-round games are about 6 MB.
 
 ## Local evaluation
 

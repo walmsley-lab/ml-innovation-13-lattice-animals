@@ -9,6 +9,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { createRequire } from 'node:module';
+import { listRecords, readRecord } from './archive.mjs';
 
 const require = createRequire(import.meta.url);
 const { matchesFor } = require('../src/planner.js');
@@ -21,6 +22,7 @@ const runsDirectory = resolve(argumentAfter('--runs') ?? process.env.LATTICE_RUN
 const tracesDirectory = resolve(argumentAfter('--traces') ?? process.env.LACK_TRACES ?? 'traces');
 const me = argumentAfter('--me') ?? process.env.LATTICE_ME ?? process.env.LATTICE_USER ?? null;
 const asJson = process.argv.includes('--json');
+const showGames = process.argv.includes('--games');
 
 const keyOf = (x, y, width) => y * width + x;
 const mean = values => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
@@ -161,12 +163,15 @@ function analyzeRun(record) {
       // Energy falls by exactly one for each unit left out of a match.
       const unmatched = start.energy - totals.totalEnergy;
       const matched = start.survivors - unmatched;
-      const ceiling = size ? size * Math.floor(start.survivors / size) : null;
+      // What the player could have matched using only its own units. Exceeding it
+      // means foreign units completed some shapes, which the rules allow.
+      const solo = size ? size * Math.floor(start.survivors / size) : null;
       perPlayer.push({
         name, golem: start.golem,
         survivorsBefore: start.survivors, survivorsAfter: totals.survivorCount,
         matched, unmatched, eliminated: start.survivors - totals.survivorCount,
-        ceiling, efficiency: ceiling ? matched / ceiling : null,
+        solo, assisted: solo === null ? null : Math.max(0, matched - solo),
+        matchRate: start.survivors ? matched / start.survivors : null,
       });
       before.set(name, { energy: totals.totalEnergy, survivors: totals.survivorCount, golem: start.golem });
     }
@@ -216,12 +221,9 @@ function analyzeRun(record) {
 }
 
 async function loadRuns() {
-  let names;
-  try { names = await readdir(runsDirectory); }
-  catch { return []; }
   const runs = [];
-  for (const name of names.filter(entry => entry.endsWith('.json'))) {
-    try { runs.push(JSON.parse(await readFile(join(runsDirectory, name), 'utf8'))); }
+  for (const name of await listRecords(runsDirectory)) {
+    try { runs.push(await readRecord(runsDirectory, name)); }
     catch { console.error(`Unreadable archive entry: ${name}`); }
   }
   return runs;
@@ -291,42 +293,62 @@ if (asJson) {
   console.log(`No archived games in ${runsDirectory} and no traces in ${tracesDirectory}.`);
   console.log('Record arena games first:  node --env-file=.env tools/record.mjs --once');
 } else {
-  for (const run of runs) {
-    const winner = run.results.find(result => result.winner)?.name ?? 'draw';
-    console.log(`\n${run.gameId}  ${run.mode}  ${run.players.join(' vs ')}  winner: ${winner}  (${run.endReason})`);
-    console.log('  rnd  size  engine  best  lost  settled/turns  orphans  ' +
-      run.rounds[0]?.players.map(player => player.name.slice(0, 10).padEnd(10)).join(' '));
-    for (const round of run.rounds) {
-      const cells = run.rounds[0]?.players.map(player => {
-        const entry = round.players.find(candidate => candidate.name === player.name);
-        return entry ? `${String(entry.matched).padStart(3)}/${String(entry.survivorsBefore).padEnd(3)}${percent(entry.efficiency)}`.padEnd(10) : ' '.repeat(10);
-      }).join(' ');
-      console.log(`  ${String(round.round).padStart(3)}  ${String(round.shapeSize ?? '-').padStart(4)}  ` +
-        `${String(round.engineMatches).padStart(6)}  ${String(round.bestMatches).padStart(4)}  ` +
-        `${String(round.matcherLoss).padStart(4)}  ${String(round.settledAtTurn).padStart(7)}/${String(round.roundTurns).padEnd(5)}  ` +
-        `${String(round.orphanCells ?? '-').padStart(7)}  ${cells}`);
+  if (showGames) {
+    for (const run of runs) {
+      const winner = run.results.find(result => result.winner)?.name ?? 'draw';
+      console.log(`\n${run.gameId}  ${run.mode}  ${run.players.join(' vs ')}  winner: ${winner}  (${run.endReason})`);
+      console.log('  rnd  size  matches  settled/turns  orphans  ' +
+        run.rounds[0]?.players.map(player => player.name.slice(0, 10).padEnd(10)).join(' '));
+      for (const round of run.rounds) {
+        const cells = run.rounds[0]?.players.map(player => {
+          const entry = round.players.find(candidate => candidate.name === player.name);
+          return entry ? `${String(entry.matched).padStart(3)}/${String(entry.survivorsBefore).padEnd(3)}${percent(entry.matchRate)}`.padEnd(10) : ' '.repeat(10);
+        }).join(' ');
+        console.log(`  ${String(round.round).padStart(3)}  ${String(round.shapeSize ?? '-').padStart(4)}  ` +
+          `${String(round.engineMatches).padStart(7)}  ${String(round.settledAtTurn).padStart(7)}/${String(round.roundTurns).padEnd(5)}  ` +
+          `${String(round.orphanCells ?? '-').padStart(7)}  ${cells}`);
+      }
     }
   }
 
   if (runs.length) {
     const allRounds = runs.flatMap(run => run.rounds);
-    const mine = me ? allRounds.flatMap(round => round.players.filter(player => player.name === me)) : [];
-    console.log(`\nAcross ${runs.length} game(s), ${allRounds.length} completed round(s):`);
-    console.log(`  matcher headroom      ${mean(allRounds.map(round => round.matcherLoss)).toFixed(2)} extra matches per round were on the board but out of scan order`);
-    console.log(`  round settles at turn ${mean(allRounds.map(round => round.settledAtTurn)).toFixed(1)} of ${mean(allRounds.map(round => round.roundTurns)).toFixed(0)} — later turns are unused leverage`);
-    console.log(`  orphaned cells        ${mean(allRounds.map(round => round.orphanCells ?? 0)).toFixed(1)} per round sat in components too small to ever match`);
-    if (mine.length) {
-      console.log(`  ${me} efficiency ${percent(mean(mine.map(player => player.efficiency)))} of the units it could have matched`);
-      console.log(`  ${me} losses     ${mean(mine.map(player => player.eliminated)).toFixed(2)} units eliminated per round`);
+    const entries = allRounds.flatMap(round => round.players);
+    console.log(`\n${runs.length} game(s), ${allRounds.length} completed round(s)` +
+      (showGames ? '' : '  (pass --games for per-round tables)'));
+
+    console.log('\nBoard');
+    console.log(`  rounds settle at turn ${mean(allRounds.map(round => round.settledAtTurn)).toFixed(1)} of ` +
+      `${mean(allRounds.map(round => round.roundTurns)).toFixed(0)} — later turns are unused leverage`);
+    console.log(`  orphaned cells        ${mean(allRounds.map(round => round.orphanCells ?? 0)).toFixed(1)} per round, stranded in components too small to match`);
+    console.log(`  matcher headroom      ${mean(allRounds.map(round => round.matcherLoss)).toFixed(2)} extra disjoint placements the row-major scan left behind`);
+
+    // One row per competitor: how much of its force it keeps matched, how often it
+    // needs foreign units to do it, and how fast it is bleeding.
+    const byName = new Map();
+    for (const entry of entries) {
+      if (!byName.has(entry.name)) byName.set(entry.name, []);
+      byName.get(entry.name).push(entry);
     }
-    const opponents = new Map();
-    for (const player of allRounds.flatMap(round => round.players)) {
-      if (player.name === me || player.golem) continue;
-      if (!opponents.has(player.name)) opponents.set(player.name, []);
-      opponents.get(player.name).push(player.efficiency);
+    const table = [...byName].map(([name, rows]) => ({
+      name,
+      golem: rows.some(row => row.golem),
+      rounds: rows.length,
+      matchRate: mean(rows.map(row => row.matchRate).filter(value => value !== null)),
+      assisted: mean(rows.map(row => row.assisted ?? 0)),
+      eliminated: mean(rows.map(row => row.eliminated)),
+      survived: rows.at(-1)?.survivorsAfter ?? 0,
+    })).sort((a, b) => (b.matchRate ?? 0) - (a.matchRate ?? 0));
+
+    console.log('\nCompetitors                 rounds   match rate   assisted/rnd   lost/rnd');
+    for (const row of table) {
+      const flag = row.name === me ? ' <- you' : row.golem ? ' (golem)' : '';
+      console.log(`  ${row.name.slice(0, 24).padEnd(24)} ${String(row.rounds).padStart(6)}   ` +
+        `${percent(row.matchRate).padStart(10)}   ${row.assisted.toFixed(2).padStart(12)}   ` +
+        `${row.eliminated.toFixed(2).padStart(8)}${flag}`);
     }
-    for (const [name, values] of opponents) {
-      console.log(`  ${name.padEnd(16)} ${percent(mean(values.filter(value => value !== null)))}`);
+    if (me && !byName.has(me)) {
+      console.log(`\n  No rounds found for '${me}'. Connect the client and play, then record again.`);
     }
   }
 

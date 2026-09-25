@@ -6,9 +6,10 @@
 // `--record` writes replays in the same schema the arena recorder archives, so
 // `tools/analyze.mjs` reads local and live games through one code path.
 import { createRequire } from 'node:module';
-import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { writeRecord } from '../tools/archive.mjs';
 
 const kit = process.argv[2];
 if (!kit || kit.startsWith('--')) {
@@ -121,16 +122,15 @@ for (let seed = 1; seed <= games; seed++) {
   results.push(outcome);
 
   if (record) {
-    await mkdir(runsDirectory, { recursive: true });
     const gameId = `local-${opponentNames.join('-')}-${seed}`;
-    await writeFile(join(runsDirectory, `${gameId}.json`), JSON.stringify({
+    await writeRecord(runsDirectory, gameId, {
       gameId, capturedAt: new Date().toISOString(),
       summary: { mode: 'local', width: 64, height: 64, maxRounds: rounds, progress,
         players: competitors.map(({ id }) => ({ userName: id, initialCount: units, golem: false })),
         results: game.view.results },
       replay: { gameId, status: 'finished', endReason: game.view.endReason,
         results: game.view.results, log: game.view },
-    }));
+    });
   }
 }
 
@@ -146,8 +146,9 @@ for (const { id } of competitors) {
   const wins = results.filter(result => result.standings.find(standing => standing.name === id)?.winner).length;
   const energy = results.reduce((sum, result) =>
     sum + (result.standings.find(standing => standing.name === id)?.totalEnergy ?? 0), 0) / games;
+  // The solo ceiling assumes no foreign units help; exceeding it is legal and good.
   console.log(`${label(id)} match ${rate(matched, started).padStart(6)} of units   ` +
-    `${rate(matched, ceiling).padStart(6)} of the reachable ceiling   ` +
+    `${rate(matched, ceiling).padStart(6)} of its solo ceiling   ` +
     `final energy ${energy.toFixed(1).padStart(5)}   wins ${wins}/${games}`);
 }
 console.log(`\nslowest own decision ${Math.round(slowestMs * 10) / 10}ms`);
