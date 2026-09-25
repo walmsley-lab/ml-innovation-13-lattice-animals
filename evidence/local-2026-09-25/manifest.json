@@ -1,0 +1,405 @@
+{
+  "format": 1,
+  "label": "local-2026-09-25",
+  "note": "Trace ownership is private to our player; replay positions are public spectator data. Filenames do not establish a trace-to-replay pair.",
+  "traces": [
+    {
+      "file": "traces/2026-09-25T21-31-46-257Z-1.jsonl.gz",
+      "sha256": "47182de2cc5af759c8f79f04696a88a624dae83ea949bd20091f47c03f1dc61b",
+      "bytes": 37991,
+      "turns": 1024,
+      "rounds": 16,
+      "complete": false,
+      "result": null
+    },
+    {
+      "file": "traces/2026-09-25T21-31-50-844Z-2.jsonl.gz",
+      "sha256": "518b5abfa65a2cb3ace3ad6ee1a134e0bd713954573396b3cb1f6b9148b5c4b8",
+      "bytes": 30467,
+      "turns": 1024,
+      "rounds": 16,
+      "complete": false,
+      "result": null
+    },
+    {
+      "file": "traces/2026-09-25T21-31-54-509Z-3.jsonl.gz",
+      "sha256": "86632b9c2e643201e68e8ec364a6d2a996f493360021f25191aaf8e2b9a3cf86",
+      "bytes": 34883,
+      "turns": 1024,
+      "rounds": 16,
+      "complete": false,
+      "result": null
+    },
+    {
+      "file": "traces/2026-09-25T21-31-58-612Z-4.jsonl.gz",
+      "sha256": "a41206c3362f1efc848e26609b95f048d509d09fb2f107d9fa1e00a0e39049fd",
+      "bytes": 26647,
+      "turns": 832,
+      "rounds": 13,
+      "complete": false,
+      "result": null
+    },
+    {
+      "file": "traces/2026-09-25T21-32-02-010Z-5.jsonl.gz",
+      "sha256": "9ffbdcb38a2787e2ac8fafeb2834f33c60a34f8f1b5412894aa768c8ac44ca6c",
+      "bytes": 30487,
+      "turns": 1024,
+      "rounds": 16,
+      "complete": false,
+      "result": null
+    },
+    {
+      "file": "traces/2026-09-25T21-32-05-574Z-6.jsonl.gz",
+      "sha256": "57f0be88868e97287bf50f37613367d4d30761bd7c8fd65dec4006a2cfe5198e",
+      "bytes": 23325,
+      "turns": 640,
+      "rounds": 10,
+      "complete": false,
+      "result": null
+    },
+    {
+      "file": "traces/2026-09-25T21-32-36-573Z-1.jsonl.gz",
+      "sha256": "d19980956cb730e026dce6c917d94e53473cde36bba57af91a80f9ac4ee7f3e8",
+      "bytes": 41654,
+      "turns": 1024,
+      "rounds": 16,
+      "complete": false,
+      "result": null
+    },
+    {
+      "file": "traces/2026-09-25T21-32-41-084Z-2.jsonl.gz",
+      "sha256": "3c341067e5d03e75b145bacb5ba98ed25d68981ddcb25b12dab6627dea7fe898",
+      "bytes": 41704,
+      "turns": 1024,
+      "rounds": 16,
+      "complete": false,
+      "result": null
+    },
+    {
+      "file": "traces/2026-09-25T21-32-45-551Z-3.jsonl.gz",
+      "sha256": "c40bb2b1e0ab713652e958f9d2b6d8ac3572fe0fe60178dcae8acfd15f2bad7f",
+      "bytes": 41776,
+      "turns": 1024,
+      "rounds": 16,
+      "complete": false,
+      "result": null
+    },
+    {
+      "file": "traces/2026-09-25T21-32-50-028Z-4.jsonl.gz",
+      "sha256": "713b81eb48e93ab343e6b6728171f4fa4b51bff858c465ee4f725b4c0a8d16fe",
+      "bytes": 43747,
+      "turns": 1024,
+      "rounds": 16,
+      "complete": false,
+      "result": null
+    },
+    {
+      "file": "traces/2026-09-25T21-32-54-768Z-5.jsonl.gz",
+      "sha256": "78fe5e64abe9758fdd5f57aab446d8246609db1112a9d172bb9759749cd9b8f5",
+      "bytes": 41243,
+      "turns": 1024,
+      "rounds": 16,
+      "complete": false,
+      "result": null
+    },
+    {
+      "file": "traces/2026-09-25T21-32-59-298Z-6.jsonl.gz",
+      "sha256": "e918da0a7312e2d479b34db6bb26c1181fbd34daf05e010ec05447e1b89a8e02",
+      "bytes": 39592,
+      "turns": 1024,
+      "rounds": 16,
+      "complete": false,
+      "result": null
+    }
+  ],
+  "replays": [
+    {
+      "file": "replays/local-greedy-1.json.gz",
+      "sha256": "80bc9ae2689c25a9e8ef0b41627b83b46aae716c87e7310663913c5ff8b7eb93",
+      "bytes": 100721,
+      "gameId": "local-greedy-1",
+      "mode": "local",
+      "rounds": 16,
+      "results": [
+        {
+          "name": "plan",
+          "totalEnergy": 16,
+          "survivorCount": 12,
+          "rank": 1,
+          "winner": true
+        },
+        {
+          "name": "greedy",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 2,
+          "winner": false
+        }
+      ]
+    },
+    {
+      "file": "replays/local-greedy-2.json.gz",
+      "sha256": "0c999555d3b63ebde8cf68addc8983605ac11d47b20c7320e58dc6f090021fc4",
+      "bytes": 95112,
+      "gameId": "local-greedy-2",
+      "mode": "local",
+      "rounds": 16,
+      "results": [
+        {
+          "name": "plan",
+          "totalEnergy": 16,
+          "survivorCount": 15,
+          "rank": 1,
+          "winner": true
+        },
+        {
+          "name": "greedy",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 2,
+          "winner": false
+        }
+      ]
+    },
+    {
+      "file": "replays/local-greedy-3.json.gz",
+      "sha256": "621089352c4d5ba4d25f246272d7054a509c1b23a235f02dd683dfd6fba06341",
+      "bytes": 91366,
+      "gameId": "local-greedy-3",
+      "mode": "local",
+      "rounds": 16,
+      "results": [
+        {
+          "name": "plan",
+          "totalEnergy": 27,
+          "survivorCount": 25,
+          "rank": 1,
+          "winner": true
+        },
+        {
+          "name": "greedy",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 2,
+          "winner": false
+        }
+      ]
+    },
+    {
+      "file": "replays/local-greedy-4.json.gz",
+      "sha256": "214e0770661cd3f08ddfeda9f102172e7a37c2de8cb6d455c1af82d279e7b44a",
+      "bytes": 96913,
+      "gameId": "local-greedy-4",
+      "mode": "local",
+      "rounds": 16,
+      "results": [
+        {
+          "name": "plan",
+          "totalEnergy": 23,
+          "survivorCount": 20,
+          "rank": 1,
+          "winner": true
+        },
+        {
+          "name": "greedy",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 2,
+          "winner": false
+        }
+      ]
+    },
+    {
+      "file": "replays/local-greedy-5.json.gz",
+      "sha256": "bf1194777a2dd9e676eb3ab7dd56f8ed25ff6d7036cd5473faf6418988188806",
+      "bytes": 93471,
+      "gameId": "local-greedy-5",
+      "mode": "local",
+      "rounds": 16,
+      "results": [
+        {
+          "name": "plan",
+          "totalEnergy": 23,
+          "survivorCount": 18,
+          "rank": 1,
+          "winner": true
+        },
+        {
+          "name": "greedy",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 2,
+          "winner": false
+        }
+      ]
+    },
+    {
+      "file": "replays/local-greedy-6.json.gz",
+      "sha256": "1f781728da5ebe0541dfebfb357827edf097ad849ac9ab53863b3c09a0596dcc",
+      "bytes": 86693,
+      "gameId": "local-greedy-6",
+      "mode": "local",
+      "rounds": 16,
+      "results": [
+        {
+          "name": "plan",
+          "totalEnergy": 18,
+          "survivorCount": 17,
+          "rank": 1,
+          "winner": true
+        },
+        {
+          "name": "greedy",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 2,
+          "winner": false
+        }
+      ]
+    },
+    {
+      "file": "replays/local-hive-1.json.gz",
+      "sha256": "e24c26e4ae833850ffabdd7a333bb1b06f15d57e4f0e9f52a1b49c525d99e0ac",
+      "bytes": 83783,
+      "gameId": "local-hive-1",
+      "mode": "local",
+      "rounds": 16,
+      "results": [
+        {
+          "name": "plan",
+          "totalEnergy": 16,
+          "survivorCount": 15,
+          "rank": 1,
+          "winner": true
+        },
+        {
+          "name": "hive",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 2,
+          "winner": false
+        }
+      ]
+    },
+    {
+      "file": "replays/local-hive-2.json.gz",
+      "sha256": "eb21e153130617308026ac05cedb47bf564db99a819f57c3212d1d14e756486f",
+      "bytes": 75422,
+      "gameId": "local-hive-2",
+      "mode": "local",
+      "rounds": 16,
+      "results": [
+        {
+          "name": "plan",
+          "totalEnergy": 7,
+          "survivorCount": 6,
+          "rank": 1,
+          "winner": true
+        },
+        {
+          "name": "hive",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 2,
+          "winner": false
+        }
+      ]
+    },
+    {
+      "file": "replays/local-hive-3.json.gz",
+      "sha256": "405eb222550432982aeb45ce9feb5fb2f563522718b989ea48b964b0c05156ba",
+      "bytes": 74190,
+      "gameId": "local-hive-3",
+      "mode": "local",
+      "rounds": 16,
+      "results": [
+        {
+          "name": "plan",
+          "totalEnergy": 5,
+          "survivorCount": 4,
+          "rank": 1,
+          "winner": true
+        },
+        {
+          "name": "hive",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 2,
+          "winner": false
+        }
+      ]
+    },
+    {
+      "file": "replays/local-hive-4.json.gz",
+      "sha256": "79cb8fe9d06d83824f9ba9d4c748f99770f179360aaa9461ff18ac3405eeeca3",
+      "bytes": 69408,
+      "gameId": "local-hive-4",
+      "mode": "local",
+      "rounds": 13,
+      "results": [
+        {
+          "name": "hive",
+          "totalEnergy": 1,
+          "survivorCount": 1,
+          "rank": 1,
+          "winner": true
+        },
+        {
+          "name": "plan",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 2,
+          "winner": false
+        }
+      ]
+    },
+    {
+      "file": "replays/local-hive-5.json.gz",
+      "sha256": "883bab6cbf5b1817e0b036b6155926a1a9ab52fb2e5b6e91d0962808bd4318d1",
+      "bytes": 75357,
+      "gameId": "local-hive-5",
+      "mode": "local",
+      "rounds": 16,
+      "results": [
+        {
+          "name": "plan",
+          "totalEnergy": 3,
+          "survivorCount": 3,
+          "rank": 1,
+          "winner": true
+        },
+        {
+          "name": "hive",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 2,
+          "winner": false
+        }
+      ]
+    },
+    {
+      "file": "replays/local-hive-6.json.gz",
+      "sha256": "b29e69d4d91c5e7fbfcaaf98aa912f9da24e308a644f410cab9ca46cdd4355a8",
+      "bytes": 62548,
+      "gameId": "local-hive-6",
+      "mode": "local",
+      "rounds": 10,
+      "results": [
+        {
+          "name": "plan",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 1,
+          "winner": false
+        },
+        {
+          "name": "hive",
+          "totalEnergy": 0,
+          "survivorCount": 0,
+          "rank": 1,
+          "winner": false
+        }
+      ]
+    }
+  ]
+}
