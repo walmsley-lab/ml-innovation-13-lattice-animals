@@ -49,3 +49,28 @@ test('returns without a plan when too few units can form the target', () => {
     shape: I3, turnsLeft: 3 });
   assert.deepEqual(result.commands, []);
 });
+
+test('a distant unit is recruited when the horizon allows the walk', () => {
+  // Two units hold the top of an I3; the only candidate for the third is far away.
+  const input = state([unit('a', 5, 5), unit('b', 5, 6), unit('c', 5, 32)]);
+  const result = planTurn({ state: input, width: 40, height: 40, shape: I3, turnsLeft: 60 });
+  const move = result.commands.find(command => command.handle === 'c');
+  assert.ok(move, 'the distant unit should be recruited');
+  assert.equal(move.params[0], 'up');
+});
+
+test('the same walk is refused when it cannot finish before the round ends', () => {
+  const input = state([unit('a', 5, 5), unit('b', 5, 6), unit('c', 5, 32)]);
+  const result = planTurn({ state: input, width: 40, height: 40, shape: I3, turnsLeft: 12 });
+  assert.equal(result.commands.some(command => command.handle === 'c'), false);
+});
+
+test('a nearer formation is preferred when both match the same number of units', () => {
+  // 'c' can complete the column at (5,5) or the one at (5,30); the near one wins.
+  const input = state([unit('a', 5, 5), unit('b', 5, 6), unit('c', 5, 10),
+    unit('d', 5, 30), unit('e', 5, 31)]);
+  const result = planTurn({ state: input, width: 40, height: 40, shape: I3, turnsLeft: 60 });
+  const move = result.commands.find(command => command.handle === 'c');
+  assert.ok(move, 'the free unit should be assigned somewhere');
+  assert.equal(move.params[0], 'up', 'it should close on the nearer column');
+});

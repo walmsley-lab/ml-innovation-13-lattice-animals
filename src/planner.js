@@ -4,6 +4,9 @@ const DIRECTIONS = Object.freeze([
   ['up', 0, -1], ['down', 0, 1], ['left', -1, 0], ['right', 1, 0],
 ]);
 
+// Manhattan distance is a lower bound on arrival: routing detours around traffic.
+const ROUTE_SLACK = 1.1;
+
 const keyOf = (x, y, width) => y * width + x;
 const distance = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 const handleOf = unit => String(unit.handle);
@@ -65,7 +68,7 @@ function candidateAt(x, y, shape, width, occupied, own, available, blocked, turn
         if (!best || steps + inertia < best.cost) best = { i, unit, steps, cost: steps + inertia };
       }
     }
-    if (!best || best.steps >= turnsLeft) return null;
+    if (!best || best.steps * ROUTE_SLACK + 1 > turnsLeft) return null;
     const [target] = holes.splice(best.i, 1);
     used.add(handleOf(best.unit));
     assignments.push({ unit: best.unit, target });
@@ -77,11 +80,16 @@ function candidateAt(x, y, shape, width, occupied, own, available, blocked, turn
   if (!ownedCount) return null;
   const urgent = assignments.reduce((sum, { unit }) => sum + (unit.energy === 1 ? 0.25 : 0), 0);
   const completion = Math.pow(reliability, foreign);
-  const travelPenalty = 0.055 * totalDistance + 0.10 * longest;
-  const delayPenalty = longest > turnsLeft * 0.7 ? 1 : 0;
+  // No rule charges energy for moving, so distance is a deadline and an opportunity
+  // cost, never a cost in itself. Scaling by the horizon keeps both terms below one
+  // matched unit: a plan that spends the whole round still outranks a closer plan
+  // that matches fewer units, while ties go to the plan that keeps units free.
+  const span = Math.max(1, turnsLeft);
+  const travelPenalty = 0.60 * (longest / span) + 0.30 * (totalDistance / (cells.length * span));
+  // Long walks must survive replanning, so committed assignments hold their ground.
   const continuity = assignments.reduce((sum, { unit, target }) =>
-    sum + (previous.get(handleOf(unit)) === keyOf(target.x, target.y, width) ? 0.12 : 0), 0);
-  const score = (ownedCount + urgent) * completion - travelPenalty - delayPenalty + continuity;
+    sum + (previous.get(handleOf(unit)) === keyOf(target.x, target.y, width) ? 0.20 : 0), 0);
+  const score = (ownedCount + urgent) * completion - travelPenalty + continuity;
   return { x, y, cells: cells.map(cell => cell.key), assignments, foreign, score };
 }
 
