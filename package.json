@@ -6,9 +6,15 @@
   "scripts": {
     "test": "node --test tests/*.test.*",
     "install:kit": "node scripts/install.mjs",
+    "play": "node --env-file-if-exists=.env tools/supervise.mjs",
+    "token": "node --env-file-if-exists=.env tools/player-token.mjs",
     "record": "node --env-file-if-exists=.env tools/record.mjs",
     "analyze": "node tools/analyze.mjs",
-    "opponents": "node tools/fetch-opponents.mjs"
+    "opponents": "node tools/opponents.mjs",
+    "fetch:opponents": "node tools/fetch-opponents.mjs",
+    "fit": "node tools/fit-persistence.mjs"
   },
-  "engines": { "node": ">=24" }
+  "engines": {
+    "node": ">=24"
+  }
 }

@@ -26,6 +26,38 @@ The kit's reference configuration has 64 turns per round. If the organizer chang
 
 The player does not attack or defect yet. A deliberate late departure from a mixed shape is an experimental policy because it also costs our unit energy and can benefit a third competitor or damage a noncompetitive golem.
 
+## Playing continuously
+
+Arena ranks on accumulated wins, so disconnected time is rank not earned. The
+contest client does not reconnect — it logs the close code and exits — so it needs
+a supervisor.
+
+```sh
+npm run token     # fetch the player token into .env, once
+npm run play      # foreground; Ctrl-C to stop
+```
+
+It restarts the client, backing off from 2s to 120s when failures are immediate
+and resetting once a connection has held for two minutes. Two close codes are
+special: 4001 means another client took the account, so it waits longer rather
+than fighting for it, and 4003 means the token was rotated, which cannot be
+recovered by reconnecting, so it stops and says so. A lock file refuses to start
+beside a live supervisor, because one connection controls an account and a
+second would evict the first.
+
+Every twenty minutes it archives finished games and compresses traces older than
+six hours, so a long session stays analysable without filling the disk.
+
+To keep it running across logouts and reboots:
+
+```sh
+cp tools/latticeanimals.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now latticeanimals
+loginctl enable-linger $USER          # survive logout
+journalctl --user -u latticeanimals -f
+```
+
 ## Inspecting real games
 
 Nothing in the contest kit keeps a record: `client.js` discards every frame it

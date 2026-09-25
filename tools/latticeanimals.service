@@ -1,0 +1,26 @@
+# Keeps the player client connected across logouts and reboots.
+#
+#   mkdir -p ~/.config/systemd/user
+#   cp tools/latticeanimals.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now latticeanimals
+#   systemctl --user status latticeanimals
+#   journalctl --user -u latticeanimals -f
+#
+# Without lingering, the service stops when you log out:
+#   loginctl enable-linger $USER
+
+[Unit]
+Description=LatticeAnimals player client
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/patrickwalmsley/Development/ml-innovation-13-lattice-animals
+ExecStart=/home/patrickwalmsley/.nvm/versions/node/v24.15.0/bin/node --env-file-if-exists=.env tools/supervise.mjs
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
