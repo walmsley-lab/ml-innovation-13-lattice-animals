@@ -62,6 +62,12 @@ async function claimLock() {
   await writeFile(lockFile, String(process.pid));
 }
 
+/** Still ours? A supervisor that lost the lock must not fight the one that holds it. */
+async function holdsLock() {
+  const current = await readFile(lockFile, 'utf8').catch(() => null);
+  return current === String(process.pid);
+}
+
 async function releaseLock() {
   const current = await readFile(lockFile, 'utf8').catch(() => null);
   if (current === String(process.pid)) await unlink(lockFile).catch(() => {});
@@ -138,6 +144,13 @@ let backoff = MIN_BACKOFF_MS;
 let sinceArchive = Date.now();
 
 while (!stopping) {
+  // Checked before every start, not just at boot: a supervisor that was launched
+  // in a way that outlived its shell can otherwise sit here evicting the live one
+  // with 4001 for as long as it runs.
+  if (!await holdsLock()) {
+    await log('Another supervisor holds the lock. Exiting rather than fighting it.');
+    break;
+  }
   const startedAt = Date.now();
   const { code, signal, closeCode } = await runClient();
   const ranFor = Date.now() - startedAt;

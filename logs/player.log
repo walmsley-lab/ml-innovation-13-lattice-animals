@@ -43,3 +43,12 @@
 2026-09-25T23:03:29.404Z Client exited (code 0, signal none, close 4001) after 2247s.
 2026-09-25T23:03:29.404Z Another client took over this account. Waiting longer before trying again.
 2026-09-25T23:03:29.408Z Reconnecting in 120s.
+2026-09-25T23:05:29.643Z   client | Authenticated at wss://latticeanimals.com/ws
+2026-09-25T23:05:29.709Z   client | Disconnected 4001
+2026-09-25T23:05:29.723Z Client exited (code 0, signal none, close 4001) after 121s.
+2026-09-25T23:05:29.723Z Another client took over this account. Waiting longer before trying again.
+2026-09-25T23:05:29.723Z Reconnecting in 120s.
+2026-09-25T23:06:11.548Z Stopping on SIGTERM.
+2026-09-25T23:06:55.839Z Stopping on SIGTERM.
+2026-09-25T23:06:58.991Z Supervising /home/patrickwalmsley/Development/LACK against wss://latticeanimals.com/ws. Traces in /home/patrickwalmsley/Development/ml-innovation-13-lattice-animals/traces.
+2026-09-25T23:06:59.828Z   client | Authenticated at wss://latticeanimals.com/ws
