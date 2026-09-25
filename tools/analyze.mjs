@@ -10,6 +10,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { createRequire } from 'node:module';
 import { listRecords, readRecord } from './archive.mjs';
+import { roundOutcomes } from './rounds.mjs';
 
 const require = createRequire(import.meta.url);
 const { matchesFor } = require('../src/planner.js');
@@ -129,24 +130,15 @@ function analyzeRun(record) {
   if (!log?.turns?.length) return null;
   const width = log.width ?? summary.width;
   const height = log.height ?? summary.height;
-  const rounds = log.rounds ?? [];
-  const progress = summary.progress ?? [];
   const players = (summary.players ?? []).map(player => player.userName);
-
-  const before = new Map((summary.players ?? []).map(player => [player.userName, {
-    energy: (player.initialCount ?? 0) * (log.config?.startingEnergy ?? 2),
-    survivors: player.initialCount ?? 0,
-    golem: Boolean(player.golem),
-  }]));
+  const outcomes = roundOutcomes(record);
 
   const roundReports = [];
-  for (const round of rounds) {
-    if (!round.completed) continue;
+  for (const round of outcomes.rounds) {
     const frame = log.turns[round.endTurn];
     if (!frame) continue;
     const occupied = new Set(frame.units.map(unit => keyOf(unit.x, unit.y, width)));
-    // Replays carry the round's shape; the match geometry is only a fallback.
-    const recorded = frame.targetShape ?? round.targetShape;
+    const recorded = frame.targetShape ?? log.rounds[round.round]?.targetShape;
     const shape = recorded?.cells?.length
       ? { width: recorded.width ?? Math.max(...recorded.cells.map(cell => cell[0])) + 1,
           height: recorded.height ?? Math.max(...recorded.cells.map(cell => cell[1])) + 1,
@@ -154,35 +146,12 @@ function analyzeRun(record) {
       : frame.matches.length ? shapeFromCells(frame.matches[0]) : null;
     const size = shape ? shape.cells.length : null;
 
-    const sample = progress.find(entry => entry.round === round.index);
-    const perPlayer = [];
-    for (const name of players) {
-      const start = before.get(name);
-      const totals = sample?.players?.find(entry => entry.userName === name);
-      if (!start || !totals) continue;
-      // Energy falls by exactly one for each unit left out of a match.
-      const unmatched = start.energy - totals.totalEnergy;
-      const matched = start.survivors - unmatched;
-      // What the player could have matched using only its own units. Exceeding it
-      // means foreign units completed some shapes, which the rules allow.
-      const solo = size ? size * Math.floor(start.survivors / size) : null;
-      perPlayer.push({
-        name, golem: start.golem,
-        survivorsBefore: start.survivors, survivorsAfter: totals.survivorCount,
-        matched, unmatched, eliminated: start.survivors - totals.survivorCount,
-        solo, assisted: solo === null ? null : Math.max(0, matched - solo),
-        matchRate: start.survivors ? matched / start.survivors : null,
-      });
-      before.set(name, { energy: totals.totalEnergy, survivors: totals.survivorCount, golem: start.golem });
-    }
-
     // What the board was worth versus what the row-major scan collected.
     let engineMatches = frame.matches.length;
     let bestMatches = engineMatches;
     if (shape) {
-      const all = placements(occupied, { ...shape }, width, height);
       engineMatches = matchesFor(occupied, { ...shape }, width, height).length;
-      bestMatches = maxDisjoint(all);
+      bestMatches = maxDisjoint(placements(occupied, { ...shape }, width, height));
     }
 
     // How long the round actually needed.
@@ -196,16 +165,16 @@ function analyzeRun(record) {
 
     const sizes = componentSizes(occupied, width);
     roundReports.push({
-      round: round.index,
+      round: round.round,
       shape: shape?.name ?? (shape ? shapeKey(shape) : null),
       shapeSize: size,
-      eliminated: round.eliminatedCount ?? null,
+      eliminated: round.eliminated,
       engineMatches, bestMatches,
       matcherLoss: bestMatches - engineMatches,
       settledAtTurn: settled, roundTurns: counts.length - 1,
       orphanCells: size ? sizes.filter(value => value < size).reduce((sum, value) => sum + value, 0) : null,
       components: sizes.length,
-      players: perPlayer,
+      players: round.players,
     });
   }
 
@@ -214,6 +183,7 @@ function analyzeRun(record) {
     mode: summary.mode ?? record.replay?.mode ?? 'arena',
     endReason: record.replay?.endReason ?? summary.endReason ?? null,
     players,
+    verified: outcomes.verified,
     results: record.replay?.results ?? summary.results ?? [],
     turns: log.turns.length,
     rounds: roundReports,
@@ -314,7 +284,9 @@ if (asJson) {
   if (runs.length) {
     const allRounds = runs.flatMap(run => run.rounds);
     const entries = allRounds.flatMap(round => round.players);
+    const unverified = runs.filter(run => !run.verified).length;
     console.log(`\n${runs.length} game(s), ${allRounds.length} completed round(s)` +
+      (unverified ? `, ${unverified} whose round alignment could not be confirmed against the board` : '') +
       (showGames ? '' : '  (pass --games for per-round tables)'));
 
     console.log('\nBoard');

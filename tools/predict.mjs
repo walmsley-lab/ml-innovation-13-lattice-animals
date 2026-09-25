@@ -7,6 +7,7 @@
 // curve, so a projection has to simulate the spiral rather than multiply a mean.
 import { resolve } from 'node:path';
 import { listRecords, readRecord } from './archive.mjs';
+import { competitorRows, roundOutcomes } from './rounds.mjs';
 
 const argumentAfter = flag => {
   const index = process.argv.indexOf(flag);
@@ -19,37 +20,13 @@ const maxRounds = Number.parseInt(argumentAfter('--rounds') ?? '16', 10);
 
 const mean = values => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
 
-/** Per-round observations: how many units a competitor held, and how many matched. */
-function observations(record) {
-  const log = record.replay?.log;
-  const players = record.summary?.players ?? [];
-  const progress = record.summary?.progress ?? [];
-  if (!log?.rounds) return [];
-  const startingEnergy = log.config?.startingEnergy ?? 2;
-  const state = new Map(players.map(player => [player.userName, {
-    energy: (player.initialCount ?? 0) * startingEnergy, survivors: player.initialCount ?? 0,
-  }]));
-  const rows = [];
-  for (const round of log.rounds) {
-    if (!round.completed) continue;
-    const sample = progress.find(entry => entry.round === round.index);
-    if (!sample) continue;
-    const shapeSize = log.turns[round.endTurn]?.targetShape?.cells?.length ?? null;
-    for (const [name, start] of state) {
-      const totals = sample.players.find(entry => entry.userName === name);
-      if (!totals) continue;
-      const unmatched = start.energy - totals.totalEnergy;
-      if (start.survivors > 0) {
-        rows.push({ game: record.gameId, name, round: round.index, shapeSize,
-          before: start.survivors, matched: start.survivors - unmatched,
-          rate: (start.survivors - unmatched) / start.survivors,
-          energyBefore: start.energy, energyAfter: totals.totalEnergy, after: totals.survivorCount });
-      }
-      state.set(name, { energy: totals.totalEnergy, survivors: totals.survivorCount });
-    }
-  }
-  return rows;
-}
+// Round attribution lives in rounds.mjs, which verifies its alignment against the
+// board before trusting it.
+const observations = record => competitorRows(record).map(row => ({
+  game: row.game, name: row.name, round: row.round, shapeSize: row.shapeSize,
+  before: row.survivorsBefore, matched: row.matched, rate: row.matchRate,
+  after: row.survivorsAfter, energyAfter: null,
+}));
 
 /** Deterministic PRNG, so a projection can be rerun and compared. */
 function randomSource(seed = 20260925) {
@@ -102,7 +79,7 @@ function simulate(curve, { units = startingUnits, rounds = maxRounds, triage = '
   for (let round = 0; round < rounds; round++) {
     const survivors = full + weak;
     if (survivors <= 0) break;
-    const rate = rates ? rates[round] ?? curve(survivors) : curve(survivors);
+    const rate = rates ? rates[round] ?? 0 : curve(survivors);
     const unmatched = survivors * (1 - rate);
     let lostFull, lostWeak;
     if (triage === 'protect-weak') {
@@ -148,7 +125,7 @@ for (const record of arena) {
     if (!own.length) continue;
     const declared = results.get(name);
     actuals.push({ name, rates: own.map(row => row.rate), units: own[0].before, rounds: own.length,
-      energy: declared?.totalEnergy ?? own.at(-1).energyAfter,
+      energy: declared?.totalEnergy ?? 0,
       survivors: declared?.survivorCount ?? own.at(-1).after });
   }
 }
@@ -185,7 +162,7 @@ if (subjectGames.length >= 3) {
     const errors = subjectGames.map((run, index) => {
       const own = observations(run).filter(row => row.name === subject).sort((a, b) => a.round - b.round);
       const projected = simulate(null, { units: own[0].before, rounds: own.length, triage: rule, rates: own.map(row => row.rate) });
-      return Math.abs(projected.energy - (observedFinishes[index] ?? own.at(-1).energyAfter));
+      return Math.abs(projected.energy - (observedFinishes[index] ?? 0));
     });
     return { triage: rule, error: mean(errors) };
   }).sort((a, b) => a.error - b.error);

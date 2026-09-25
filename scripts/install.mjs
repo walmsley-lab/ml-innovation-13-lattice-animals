@@ -1,16 +1,23 @@
 import { copyFile, mkdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 
-const destination = process.argv[2];
-if (!destination) {
-  console.error('Usage: node scripts/install.mjs /path/to/LACK');
-  process.exitCode = 1;
-} else {
+const FILES = ['player.js', 'src/planner.js', 'src/recorder.js'];
+
+export async function install(destination) {
   const root = resolve(import.meta.dirname, '..');
   const kit = resolve(destination);
   await mkdir(join(kit, 'src'), { recursive: true });
-  await copyFile(join(root, 'player.js'), join(kit, 'player.js'));
-  await copyFile(join(root, 'src/planner.js'), join(kit, 'src/planner.js'));
-  await copyFile(join(root, 'src/recorder.js'), join(kit, 'src/recorder.js'));
-  console.log(`Installed player.js, src/planner.js and src/recorder.js in ${kit}`);
+  for (const file of FILES) await copyFile(join(root, file), join(kit, file));
+  return kit;
+}
+
+// Only act as a command when run directly, so the benchmark can import it.
+if (process.argv[1] && import.meta.filename === resolve(process.argv[1])) {
+  const destination = process.argv[2];
+  if (!destination) {
+    console.error('Usage: node scripts/install.mjs /path/to/LACK');
+    process.exitCode = 1;
+  } else {
+    console.log(`Installed ${FILES.join(', ')} in ${await install(destination)}`);
+  }
 }

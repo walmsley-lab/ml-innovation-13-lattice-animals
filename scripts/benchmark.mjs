@@ -10,12 +10,17 @@ import { readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { writeRecord } from '../tools/archive.mjs';
+import { install } from './install.mjs';
 
 const kit = process.argv[2];
 if (!kit || kit.startsWith('--')) {
   console.error('Usage: node scripts/benchmark.mjs /path/to/LACK [games] [--vs names] [--record]');
   process.exit(1);
 }
+// The kit holds its own copy of the strategy, so stale installs silently benchmark
+// the previous version. Refresh it here rather than rely on remembering.
+await install(resolve(kit));
+
 const require = createRequire(import.meta.url);
 const Game = require(join(resolve(kit), 'game/Game.js'));
 const Player = require(join(resolve(kit), 'game/Player.js'));
@@ -31,6 +36,8 @@ const record = process.argv.includes('--record');
 // Arena seats an optional noncompetitive golem. It takes no result but occupies
 // cells and supplies foreign units, so it changes density and must be modelled.
 const golemName = argumentAfter('--golem');
+// Forcing one shape isolates a shape-specific failure from the usual rotation.
+const forcedShape = argumentAfter('--shape');
 const runsDirectory = resolve(process.env.LATTICE_RUNS || 'runs');
 const opponentsDirectory = resolve(process.env.LACK_OPPONENTS || 'opponents');
 const units = Number.parseInt(process.env.BENCH_UNITS || '16', 10);
@@ -73,7 +80,10 @@ for (let seed = 1; seed <= games; seed++) {
   const perRound = [];
 
   for (let index = 0; index < rounds && game.viableShapes.length; index++) {
-    const shape = game.viableShapes[(seed + index * 3) % game.viableShapes.length];
+    const shape = forcedShape
+      ? game.viableShapes.find(entry => entry.name === forcedShape)
+      : game.viableShapes[(seed + index * 3) % game.viableShapes.length];
+    if (!shape) throw new Error(`Shape '${forcedShape}' is not viable here.`);
     game.round(shape);
     const before = new Map(competitors.map(({ id }) => [id, game.observe(id).ownUnits.length]));
     for (const [id, player] of players) {

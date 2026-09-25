@@ -74,3 +74,4 @@ test('a nearer formation is preferred when both match the same number of units',
   assert.ok(move, 'the free unit should be assigned somewhere');
   assert.equal(move.params[0], 'up', 'it should close on the nearer column');
 });
+
