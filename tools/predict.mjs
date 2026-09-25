@@ -51,6 +51,30 @@ function observations(record) {
   return rows;
 }
 
+/** Deterministic PRNG, so a projection can be rerun and compared. */
+function randomSource(seed = 20260925) {
+  let state = seed >>> 0;
+  return () => {
+    state ^= state << 13; state ^= state >>> 17; state ^= state << 5;
+    return (state >>> 0) / 4294967296;
+  };
+}
+
+/** Observed rates pooled by force size, for sampling whole trajectories. */
+function ratePools(rows) {
+  const pools = new Map();
+  for (const row of rows) {
+    const bucket = Math.min(8, Math.floor(row.before / 4));
+    if (!pools.has(bucket)) pools.set(bucket, []);
+    pools.get(bucket).push(row.rate);
+  }
+  return survivors => {
+    let bucket = Math.min(8, Math.floor(survivors / 4));
+    while (bucket >= 0 && !pools.has(bucket)) bucket--;
+    return pools.get(bucket) ?? [...pools.values()].flat();
+  };
+}
+
 /** Match rate against surviving units, as a step function over the observed data. */
 function rateCurve(rows) {
   const buckets = new Map();
@@ -135,7 +159,7 @@ const fits = ['proportional', 'protect-weak', 'sacrifice-weak'].map(triage => {
   });
   return { triage, error: mean(errors) };
 }).sort((a, b) => a.error - b.error);
-const triage = fits[0].triage;
+let triage = fits[0].triage;
 
 console.log(`Archive: ${arena.length} arena game(s), ${arenaRows.length} competitor-rounds` +
   (local.length ? `; ${local.length} local game(s), ${localRows.length} competitor-rounds` : ''));
@@ -152,18 +176,64 @@ if (!subjectRows.length) {
   console.error('  BENCH_UNITS=32 BENCH_ROUNDS=16 node scripts/benchmark.mjs ../LACK 6 --vs hive --record');
   process.exit(1);
 }
+// Strategies triage differently, so prefer a rule fitted to the subject's own play.
+const subjectGames = local.filter(run => observations(run).some(row => row.name === subject));
+const observedFinishes = subjectGames.map(run =>
+  (run.replay?.results ?? []).find(result => result.name === subject)?.totalEnergy).filter(value => value !== undefined);
+if (subjectGames.length >= 3) {
+  const subjectFits = ['proportional', 'protect-weak', 'sacrifice-weak'].map(rule => {
+    const errors = subjectGames.map((run, index) => {
+      const own = observations(run).filter(row => row.name === subject).sort((a, b) => a.round - b.round);
+      const projected = simulate(null, { units: own[0].before, rounds: own.length, triage: rule, rates: own.map(row => row.rate) });
+      return Math.abs(projected.energy - (observedFinishes[index] ?? own.at(-1).energyAfter));
+    });
+    return { triage: rule, error: mean(errors) };
+  }).sort((a, b) => a.error - b.error);
+  console.log(`\nFit against '${subject}' own ${subjectGames.length} game(s): ` +
+    subjectFits.map(fit => `${fit.triage} ${fit.error.toFixed(2)}`).join(', '));
+  triage = subjectFits[0].triage;
+}
+
 const subjectCurve = rateCurve(subjectRows);
 console.log(`\nMatch rate for '${subject}' measured locally (${subjectRows.length} rounds):`);
 for (const units of [32, 24, 16, 8, 4]) console.log(`  ${String(units).padStart(2)} units  ${(subjectCurve(units) * 100).toFixed(1)}%`);
 
 const flatBaseline = actuals.map(actual => actual.energy).sort((a, b) => a - b);
-const projection = simulate(subjectCurve, { triage });
-console.log(`\nProjected over ${maxRounds} rounds from ${startingUnits} units (${triage} triage):`);
-for (const step of projection.trace.filter((_, index) => index % 4 === 0 || index === projection.trace.length - 1)) {
-  console.log(`  round ${String(step.round).padStart(2)}  ${step.survivors.toFixed(1).padStart(5)} units  ` +
-    `${step.energy.toFixed(1).padStart(5)} energy  at ${(step.rate * 100).toFixed(1)}%`);
+// Outcomes are dispersed and the dynamics are convex, so simulating the average
+// rate is not the average outcome. Sample whole trajectories instead.
+const TRIALS = 4000;
+const pools = ratePools(subjectRows);
+const random = randomSource();
+const outcomes = [];
+for (let trial = 0; trial < TRIALS; trial++) {
+  let full = startingUnits, weak = 0;
+  for (let round = 0; round < maxRounds; round++) {
+    const survivors = full + weak;
+    if (survivors <= 0) break;
+    const pool = pools(survivors);
+    const rate = pool[Math.floor(random() * pool.length)] ?? 0;
+    const unmatched = survivors * (1 - rate);
+    let lostFull, lostWeak;
+    if (triage === 'protect-weak') { lostFull = Math.min(unmatched, full); lostWeak = unmatched - lostFull; }
+    else if (triage === 'sacrifice-weak') { lostWeak = Math.min(unmatched, weak); lostFull = unmatched - lostWeak; }
+    else { lostFull = unmatched * (full / survivors); lostWeak = unmatched * (weak / survivors); }
+    full -= lostFull;
+    weak = weak - lostWeak + lostFull;
+  }
+  outcomes.push(2 * full + weak);
 }
-console.log(`  final     ${projection.survivors.toFixed(1)} units, ${projection.energy.toFixed(1)} energy`);
+outcomes.sort((a, b) => a - b);
+const quantile = q => outcomes[Math.min(outcomes.length - 1, Math.floor(q * outcomes.length))];
+const projection = { energy: quantile(0.5), mean: mean(outcomes) };
+
+console.log(`\nProjected finish over ${maxRounds} rounds from ${startingUnits} units ` +
+  `(${triage} triage, ${TRIALS} sampled trajectories):`);
+console.log(`  median ${quantile(0.5).toFixed(1)} energy    mean ${mean(outcomes).toFixed(1)}    ` +
+  `p10 ${quantile(0.1).toFixed(1)}  p90 ${quantile(0.9).toFixed(1)}`);
+console.log(`  wiped out in ${(100 * outcomes.filter(value => value < 1).length / outcomes.length).toFixed(0)}% of trajectories`);
+if (observedFinishes.length) {
+  console.log(`  actually observed in local play: ${observedFinishes.join(', ')} energy`);
+}
 
 // The whole game is one number. Holding a flat match rate, what does it buy?
 console.log('\nSensitivity: a flat match rate held all game, from 32 units:');
@@ -181,13 +251,18 @@ for (const actual of actuals) {
   opponents.get(actual.name).push(actual.energy);
 }
 const all = actuals.map(actual => actual.energy).sort((a, b) => a - b);
-const beaten = all.filter(energy => energy < projection.energy).length;
-console.log(`\nAgainst ${all.length} observed finishes, ${projection.energy.toFixed(1)} energy beats ` +
-  `${beaten} (${(100 * beaten / all.length).toFixed(0)}%), median finish ${all[Math.floor(all.length / 2)]}`);
+// Win probability is a comparison of two distributions, not of two point estimates.
+const beats = energies => {
+  let wins = 0;
+  for (const ours of outcomes) for (const theirs of energies) if (ours > theirs) wins++;
+  return wins / (outcomes.length * energies.length);
+};
+console.log(`\nAgainst ${all.length} observed finishes, we win ${(100 * beats(all)).toFixed(0)}% ` +
+  `of pairings; median opposing finish ${all[Math.floor(all.length / 2)]}`);
 console.log('\nHead to head, by each opponent\'s observed finishing energy:');
 const table = [...opponents].map(([name, energies]) => ({
   name, games: energies.length, median: energies.slice().sort((a, b) => a - b)[Math.floor(energies.length / 2)],
-  win: energies.filter(energy => energy < projection.energy).length / energies.length,
+  win: beats(energies),
 })).sort((a, b) => b.median - a.median);
 for (const row of table) {
   console.log(`  ${row.name.slice(0, 26).padEnd(26)} ${String(row.games).padStart(3)} games   ` +
