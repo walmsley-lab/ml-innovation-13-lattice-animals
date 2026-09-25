@@ -70,6 +70,31 @@ and the largest set of disjoint placements the board actually supported. Pass
 
 Archives are gzipped: fifty 16-round games are about 6 MB.
 
+### Preserve a shareable snapshot
+
+The live `runs/` and `traces/` directories are ignored by Git. Export a bounded
+snapshot when you want results available for review in the repository:
+
+```sh
+node tools/preserve.mjs --label arena-2026-09-25
+node tools/analyze.mjs --runs evidence/arena-2026-09-25/replays \
+  --traces evidence/arena-2026-09-25/traces --me YOUR_NAME
+git add evidence/arena-2026-09-25
+```
+
+The exporter accepts `--runs DIR` and `--traces DIR` if your recordings live
+elsewhere. It compresses traces and replays, writes a manifest with SHA-256
+checksums and counts, and rejects credential-like fields in replay data. It keeps
+only the recorder's known trace fields. Review the snapshot before committing:
+traces include your unit handles, positions, commands, and planner diagnostics;
+replays include public competitor names and game history. Use a new label for
+each snapshot. The manifest does not assert a precise trace-to-replay pairing;
+the two streams have different IDs and can be aligned by their timestamps.
+
+`evidence/local-2026-09-25/` is a small, checked-in benchmark sample, so these
+commands can be tried without access to the arena session or the original raw
+files. It is a local reproduction against kit bots, not an arena sample.
+
 ## Predicting arena results
 
 ```sh

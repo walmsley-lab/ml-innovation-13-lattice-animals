@@ -9,6 +9,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { createRequire } from 'node:module';
+import { gunzipSync } from 'node:zlib';
 import { listRecords, readRecord } from './archive.mjs';
 import { roundOutcomes } from './rounds.mjs';
 
@@ -204,8 +205,9 @@ async function loadTraces() {
   try { names = await readdir(tracesDirectory); }
   catch { return []; }
   const traces = [];
-  for (const name of names.filter(entry => entry.endsWith('.jsonl'))) {
-    const entries = (await readFile(join(tracesDirectory, name), 'utf8')).split('\n')
+  for (const name of names.filter(entry => entry.endsWith('.jsonl') || entry.endsWith('.jsonl.gz'))) {
+    const bytes = await readFile(join(tracesDirectory, name));
+    const entries = (name.endsWith('.gz') ? gunzipSync(bytes).toString('utf8') : bytes.toString('utf8')).split('\n')
       .filter(Boolean).flatMap(line => { try { return [JSON.parse(line)]; } catch { return []; } });
     if (entries.length) traces.push({ name, entries });
   }

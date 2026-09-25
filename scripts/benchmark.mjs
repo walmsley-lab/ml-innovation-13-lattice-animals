@@ -131,6 +131,7 @@ for (let seed = 1; seed <= games; seed++) {
   }
 
   game.finish('round-limit');
+  for (const { id } of competitors) players.get(id)?.finish?.(game.resultFor(id));
   const outcome = { seed, rounds: perRound,
     standings: competitors.map(({ id }) => ({ name: id, ...game.resultFor(id) })) };
   results.push(outcome);
