@@ -106,3 +106,40 @@ test('an X5 is never planned with its centre arriving after the arms', () => {
     }
   }
 });
+
+test('a foreign cell is trusted by how long the round still has to run', () => {
+  // (5,5) is ours and (5,7) is foreign; the middle still has to be walked into,
+  // so this is a plan being weighed, not a formation already standing.
+  const own = [unit('a', 5, 5), unit('b', 9, 6), unit('c', 20, 20), unit('d', 21, 20)];
+  const board = state(own, [{ x: 5, y: 7 }]);
+  const scoreFor = turnsLeft => {
+    const result = planTurn({ state: board, width: 40, height: 40, shape: I3, turnsLeft });
+    const plan = result.selected.find(entry => entry.foreign > 0 && !entry.complete);
+    return plan ? plan.score : null;
+  };
+  const late = scoreFor(6);
+  const early = scoreFor(60);
+  assert.ok(late !== null, 'a mixed plan should be worth making late in the round');
+  assert.ok(early === null || early < late,
+    `a mixed plan should not be valued as highly early (${early}) as late (${late})`);
+});
+
+test('an unreliable colour is trusted less than a reliable one', () => {
+  const own = [unit('a', 5, 5), unit('b', 9, 6)];
+  const build = blush => ({
+    ownUnits: own,
+    units: [...own.map(({ x, y }) => ({ x, y, blush: null })), { x: 5, y: 7, blush }],
+    messages: [],
+  });
+  const score = blush => {
+    const result = planTurn({ state: build(blush), width: 40, height: 40, shape: I3, turnsLeft: 30 });
+    const plan = result.selected.find(entry => entry.foreign > 0 && !entry.complete);
+    return plan ? plan.score : null;
+  };
+  // #dc2626 persists at about 0.09 in the fitted table; #2563eb at about 0.95.
+  const flighty = score('#dc2626');
+  const steady = score('#2563eb');
+  assert.ok(steady !== null, 'a steady colour should support a mixed plan');
+  assert.ok(flighty === null || flighty < steady,
+    `a flighty colour (${flighty}) should score below a steady one (${steady})`);
+});

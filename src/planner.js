@@ -7,6 +7,8 @@ const DIRECTIONS = Object.freeze([
 // Manhattan distance is a lower bound on arrival: routing detours around traffic.
 const ROUTE_SLACK = 1.1;
 
+const { persistence } = require('./persistence');
+
 const NEIGHBOURS = Object.freeze([[0, -1], [0, 1], [-1, 0], [1, 0]]);
 
 const keyOf = (x, y, width) => y * width + x;
@@ -43,14 +45,19 @@ function matchesFor(occupied, shape, width, height) {
 function occupiedBy(state, width) {
   const all = new Set(state.units.map(unit => keyOf(unit.x, unit.y, width)));
   const own = new Map(state.ownUnits.map(unit => [keyOf(unit.x, unit.y, width), unit]));
-  return { all, own };
+  // Foreign blush is the only public mark a unit carries, and it predicts whether
+  // the cell will still be there at round end.
+  const blush = new Map(state.units.map(unit => [keyOf(unit.x, unit.y, width), unit.blush ?? null]));
+  return { all, own, blush };
 }
 
-function candidateAt(x, y, shape, width, occupied, own, available, blocked, turnsLeft, reliability, previous, enclosed = -1) {
+function candidateAt(x, y, shape, width, occupied, own, available, blocked, turnsLeft, trust, previous, enclosed = -1) {
   const cells = shape.cells.map(([dx, dy]) => ({ x: x + dx, y: y + dy, key: keyOf(x + dx, y + dy, width) }));
   if (cells.some(cell => blocked.has(cell.key))) return null;
   const kept = [];
   let foreign = 0;
+  // Each foreign cell is an independent bet that it is still occupied at round end.
+  let completion = 1;
   const holes = [];
   for (const cell of cells) {
     const unit = own.get(cell.key);
@@ -59,6 +66,7 @@ function candidateAt(x, y, shape, width, occupied, own, available, blocked, turn
       kept.push(unit);
     } else if (occupied.has(cell.key)) {
       foreign++;
+      completion *= trust(cell.key);
     } else {
       holes.push(cell);
     }
@@ -110,7 +118,6 @@ function candidateAt(x, y, shape, width, occupied, own, available, blocked, turn
     }
   }
   const urgent = assignments.reduce((sum, { unit }) => sum + (unit.energy === 1 ? 0.25 : 0), 0);
-  const completion = Math.pow(reliability, foreign);
   // No rule charges energy for moving, so distance is a deadline and an opportunity
   // cost, never a cost in itself. Scaling by the horizon keeps both terms below one
   // matched unit: a plan that spends the whole round still outranks a closer plan
@@ -181,11 +188,21 @@ function route(assignments, occupied, width, height, blockedMoves = new Map()) {
 
 /** Pure decision function; memory is supplied by the Player adapter. */
 function planTurn({ state, width, height, shape, turnsLeft = 64, reliability = 0.82,
-  previous = new Map(), blockedMoves = new Map() }) {
-  const { all: occupied, own } = occupiedBy(state, width);
+  previous = new Map(), blockedMoves = new Map(), persistenceOf = persistence }) {
+  const { all: occupied, own, blush } = occupiedBy(state, width);
   const available = new Map(state.ownUnits.map(unit => [handleOf(unit), unit]));
   const enclosed = enclosedCell(shape);
   const actualMatches = matchesFor(occupied, shape, width, height);
+  // One lookup per cell, memoised: candidateAt runs over every placement.
+  const trustCache = new Map();
+  const trust = key => {
+    let value = trustCache.get(key);
+    if (value === undefined) {
+      value = Math.max(0.02, Math.min(0.99, persistenceOf(blush.get(key) ?? null, turnsLeft, reliability)));
+      trustCache.set(key, value);
+    }
+    return value;
+  };
   const blocked = new Set(actualMatches.flatMap(match => match.cells));
   const selected = [];
 
@@ -203,7 +220,7 @@ function planTurn({ state, width, height, shape, turnsLeft = 64, reliability = 0
   for (let y = 0; y <= height - shape.height; y++) {
     for (let x = 0; x <= width - shape.width; x++) {
       const candidate = candidateAt(x, y, shape, width, occupied, own, available,
-        blocked, turnsLeft, reliability, previous, enclosed);
+        blocked, turnsLeft, trust, previous, enclosed);
       if (candidate && candidate.score > 0) candidates.push(candidate);
     }
   }
@@ -213,7 +230,7 @@ function planTurn({ state, width, height, shape, turnsLeft = 64, reliability = 0
   for (const draft of candidates.slice(0, 320)) {
     if (!available.size) break;
     const candidate = candidateAt(draft.x, draft.y, shape, width, occupied, own,
-      available, blocked, turnsLeft, reliability, previous, enclosed);
+      available, blocked, turnsLeft, trust, previous, enclosed);
     if (!candidate || candidate.score <= 0) continue;
     selected.push(candidate);
     candidate.cells.forEach(cell => blocked.add(cell));

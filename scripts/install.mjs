@@ -1,7 +1,7 @@
 import { copyFile, mkdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 
-const FILES = ['player.js', 'src/planner.js', 'src/recorder.js'];
+const FILES = ['player.js', 'src/planner.js', 'src/persistence.js', 'src/recorder.js'];
 
 export async function install(destination) {
   const root = resolve(import.meta.dirname, '..');
